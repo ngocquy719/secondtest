@@ -1,23 +1,33 @@
 const path = require('path');
-const fs = require('fs');
-const Database = require('better-sqlite3');
+const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
 
 const dbPath = path.join(__dirname, '..', 'database.sqlite');
-const dbDir = path.dirname(dbPath);
 
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
-}
-
-const db = new Database(dbPath);
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('DB error:', err);
+  } else {
+    console.log('SQLite connected');
+  }
+});
 
 function runAsync(sql, params = []) {
-  return Promise.resolve(db.prepare(sql).run(...params));
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) return reject(err);
+      resolve(this);
+    });
+  });
 }
 
 function getAsync(sql, params = []) {
-  return Promise.resolve(db.prepare(sql).get(...params));
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) return reject(err);
+      resolve(row);
+    });
+  });
 }
 
 async function initDb() {
@@ -97,10 +107,5 @@ async function initDb() {
   }
 }
 
-module.exports = {
-  db,
-  initDb,
-  runAsync,
-  getAsync
-};
-
+module.exports = db;
+module.exports.initDb = initDb;

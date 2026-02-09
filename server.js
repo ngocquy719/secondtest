@@ -8,7 +8,7 @@ const express = require('express');
 const cors = require('cors');
 const { Server } = require('socket.io');
 
-const { db, initDb } = require('./src/db');
+const db = require('./src/db');
 const { authMiddleware, socketAuthMiddleware, generateToken } = require('./src/auth');
 const userRoutes = require('./src/routes/users');
 const sheetRoutes = require('./src/routes/sheets');
@@ -226,7 +226,7 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 
-initDb()
+db.initDb()
   .then(() => {
     server.listen(PORT, () => {
       console.log(`Server listening on http://localhost:${PORT}`);
