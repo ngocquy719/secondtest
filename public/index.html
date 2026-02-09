@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Realtime Spreadsheet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/plugins.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-root">
+      <header class="top-bar">
+        <div class="brand">Realtime Sheet</div>
+        <div class="current-sheet" id="top-sheet-name"></div>
+        <div class="user-info" id="top-user-wrap">
+          <span id="top-user-name"></span>
+          <button type="button" id="top-logout-btn">Logout</button>
+        </div>
+      </header>
+
+      <div class="app-shell">
+        <aside class="sidebar" id="sidebar">
+          <div class="sidebar-header">
+            <button id="sidebar-toggle" class="sidebar-toggle">☰</button>
+          </div>
+          <nav class="sidebar-nav">
+            <button class="nav-item" data-view="home" id="nav-home">Home</button>
+            <button class="nav-item" data-view="my-sheets" id="nav-my-sheets">
+              My Sheets
+            </button>
+            <button class="nav-item" data-view="shared-sheets" id="nav-shared-sheets">
+              Shared Sheets
+            </button>
+            <button
+              class="nav-item"
+              data-view="users"
+              id="nav-users"
+              style="display: none"
+            >
+              User Management
+            </button>
+            <button class="nav-item" data-view="settings" id="nav-settings">
+              Settings
+            </button>
+          </nav>
+          <div class="sidebar-section">
+            <h3>Sheets</h3>
+            <button id="create-sheet-btn" class="primary">New Sheet</button>
+            <ul id="sheets-list" class="sheets-list-ul"></ul>
+          </div>
+        </aside>
+
+        <main class="main-content">
+          <!-- Login -->
+          <section id="view-login">
+            <div class="card">
+              <h2>Sign in</h2>
+              <form id="login-form">
+                <label>
+                  Username
+                  <input type="text" id="login-username" required />
+                </label>
+                <label>
+                  Password
+                  <input type="password" id="login-password" required />
+                </label>
+                <button type="submit">Login</button>
+                <p class="hint">
+                  Default admin: <code>admin</code> / <code>admin123</code>
+                </p>
+                <p id="login-error" class="error"></p>
+              </form>
+            </div>
+          </section>
+
+          <!-- Home / Dashboard -->
+          <section id="view-home" class="hidden">
+            <div class="view-header">
+              <h1>Home</h1>
+              <button id="home-create-sheet-btn" class="primary">Create new sheet</button>
+            </div>
+            <div class="home-section">
+              <h2>Recent sheets</h2>
+              <ul id="home-recent-sheets" class="sheet-list"></ul>
+            </div>
+            <div class="home-section">
+              <h2>Shared with me</h2>
+              <ul id="home-shared-sheets" class="sheet-list"></ul>
+            </div>
+          </section>
+
+          <!-- My Sheets -->
+          <section id="view-my-sheets" class="hidden">
+            <div class="view-header">
+              <h1>My Sheets</h1>
+              <button id="my-create-sheet-btn" class="primary">Create new sheet</button>
+            </div>
+            <table class="sheet-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Updated</th>
+                  <th>Permission</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="my-sheets-table-body"></tbody>
+            </table>
+          </section>
+
+          <!-- Shared Sheets -->
+          <section id="view-shared-sheets" class="hidden">
+            <div class="view-header">
+              <h1>Shared Sheets</h1>
+            </div>
+            <table class="sheet-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Owner</th>
+                  <th>Permission</th>
+                  <th>Updated</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="shared-sheets-table-body"></tbody>
+            </table>
+          </section>
+
+          <!-- User Management -->
+          <section id="view-users" class="hidden">
+            <div class="view-header">
+              <h1>User Management</h1>
+            </div>
+            <div class="user-create-row">
+              <input type="text" id="um-username" placeholder="Username" />
+              <input type="password" id="um-password" placeholder="Password" />
+              <select id="um-role">
+                <option value="leader">Leader</option>
+                <option value="user">User</option>
+              </select>
+              <button id="um-create-btn" class="primary">Create user</button>
+            </div>
+            <p id="um-message" class="info"></p>
+            <table class="user-table">
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Role</th>
+                  <th>Created by</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="um-table-body"></tbody>
+            </table>
+          </section>
+
+          <!-- Settings -->
+          <section id="view-settings" class="hidden">
+            <div class="view-header">
+              <h1>Settings</h1>
+            </div>
+            <p class="hint">Profile and app settings can go here.</p>
+          </section>
+
+          <!-- Sheet Editor -->
+          <section id="view-sheet" class="hidden">
+            <div class="sheet-toolbar">
+              <div class="sheet-toolbar-left">
+                <button id="btn-add-row">+ Row</button>
+                <button id="btn-del-row">− Row</button>
+                <button id="btn-add-col">+ Column</button>
+                <button id="btn-del-col">− Column</button>
+                <button id="btn-col-settings">Column settings</button>
+              </div>
+              <div class="sheet-toolbar-center">
+                <span id="current-cell-ref">A1</span>
+                <span id="current-cell-meta" class="hint small"></span>
+              </div>
+              <div class="sheet-toolbar-right">
+                <button id="btn-share-sheet">Share</button>
+                <button id="btn-view-permissions">Permissions</button>
+                <button id="btn-history">History</button>
+                <button id="btn-export">Export</button>
+              </div>
+            </div>
+            <div class="sheet-container">
+              <div id="luckysheet" class="luckysheet-wrap"></div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js"></script>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>
+
