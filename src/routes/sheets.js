@@ -1,5 +1,9 @@
 const express = require('express');
-const { db } = require('../db');
+const db = require('../db');
+
+if (!db || typeof db.get !== 'function' || typeof db.all !== 'function' || typeof db.run !== 'function') {
+  throw new Error('DB instance is not initialized');
+}
 
 const router = express.Router();
 

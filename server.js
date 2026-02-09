@@ -9,6 +9,10 @@ const cors = require('cors');
 const { Server } = require('socket.io');
 
 const db = require('./src/db');
+
+if (!db || typeof db.get !== 'function' || typeof db.all !== 'function' || typeof db.run !== 'function') {
+  throw new Error('DB instance is invalid');
+}
 const { authMiddleware, socketAuthMiddleware, generateToken } = require('./src/auth');
 const userRoutes = require('./src/routes/users');
 const sheetRoutes = require('./src/routes/sheets');
@@ -78,10 +82,6 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/auth/me', authMiddleware, (req, res) => {
   res.json({ user: req.user });
 });
-
-// User & sheet routes
-app.use('/api/users', authMiddleware, userRoutes);
-app.use('/api/sheets', authMiddleware, sheetRoutes);
 
 // Socket.IO for realtime cell updates
 io.use(socketAuthMiddleware);
@@ -228,6 +228,11 @@ const PORT = process.env.PORT || 3000;
 
 db.initDb()
   .then(() => {
+    console.log('DB initialized');
+    // User & sheet routes (mounted after DB init)
+    app.use('/api/users', authMiddleware, userRoutes);
+    app.use('/api/sheets', authMiddleware, sheetRoutes);
+
     server.listen(PORT, () => {
       console.log(`Server listening on http://localhost:${PORT}`);
     });
