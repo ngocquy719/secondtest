@@ -24,7 +24,8 @@
   const menuBar = document.getElementById('gs-menu-bar');
   const menuDropdowns = document.getElementById('gs-menu-dropdowns');
 
-  // Sidebar
+  const sidebarOverlay = document.getElementById('sidebar-overlay');
+  const sidebarBackdrop = document.getElementById('sidebar-backdrop');
   const sidebarEl = document.getElementById('sidebar');
   const sidebarToggleBtn = document.getElementById('sidebar-toggle');
   const navHome = document.getElementById('nav-home');
@@ -383,44 +384,56 @@
   });
   }
 
-  if (sidebarToggleBtn && sidebarEl) {
-    sidebarToggleBtn.addEventListener('click', () => {
-    sidebarEl.classList.toggle('collapsed');
-  });
+  function closeSidebar() {
+    if (sidebarOverlay) sidebarOverlay.classList.remove('open');
+  }
+  function openSidebar() {
+    if (sidebarOverlay) sidebarOverlay.classList.add('open');
+  }
+  if (sidebarToggleBtn) {
+    sidebarToggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (sidebarOverlay && sidebarOverlay.classList.contains('open')) closeSidebar();
+      else openSidebar();
+    });
+  }
+  if (sidebarBackdrop) {
+    sidebarBackdrop.addEventListener('click', closeSidebar);
   }
 
   if (navHome) navHome.addEventListener('click', async () => {
     await loadHome();
     showView('home');
+    closeSidebar();
   });
-
   if (navMySheets) navMySheets.addEventListener('click', async () => {
     await loadMySheets();
     showView('my-sheets');
+    closeSidebar();
   });
-
   if (navSharedSheets) navSharedSheets.addEventListener('click', async () => {
     await loadSharedSheets();
     showView('shared-sheets');
+    closeSidebar();
   });
-
   if (navUsers) navUsers.addEventListener('click', async () => {
     await loadUsersView();
     showView('users');
+    closeSidebar();
   });
-
   if (navSettings) navSettings.addEventListener('click', () => {
     showView('settings');
+    closeSidebar();
   });
 
   if (menuBar && menuDropdowns) {
-    menuBar.querySelectorAll('.gs-menu-item').forEach((item) => {
+    menuBar.querySelectorAll('.menu-item').forEach((item) => {
       item.addEventListener('click', (e) => {
         e.stopPropagation();
         const menu = item.dataset.menu;
         const dropdown = document.getElementById('dropdown-' + menu);
         const open = dropdown && dropdown.classList.toggle('open');
-        menuDropdowns.querySelectorAll('.gs-dropdown').forEach((d) => {
+        menuDropdowns.querySelectorAll('.menu-dropdown').forEach((d) => {
           if (d !== dropdown) d.classList.remove('open');
         });
         if (dropdown && open) {
@@ -431,7 +444,7 @@
       });
     });
     document.addEventListener('click', () => {
-      menuDropdowns.querySelectorAll('.gs-dropdown').forEach((d) => d.classList.remove('open'));
+      menuDropdowns.querySelectorAll('.menu-dropdown').forEach((d) => d.classList.remove('open'));
     });
     menuDropdowns.addEventListener('click', (e) => e.stopPropagation());
   }
@@ -460,7 +473,7 @@
     shareCancelBtn.addEventListener('click', () => shareModal.classList.add('hidden'));
   }
   if (shareModal) {
-    shareModal.querySelector('.gs-modal-backdrop').addEventListener('click', () => shareModal.classList.add('hidden'));
+    shareModal.querySelector('.modal-backdrop').addEventListener('click', () => shareModal.classList.add('hidden'));
   }
   if (shareForm) {
     shareForm.addEventListener('submit', async (e) => {
@@ -691,6 +704,7 @@
       socket.emit('join_sheet', { sheetId });
     }
 
+    if (sidebarOverlay) sidebarOverlay.classList.remove('open');
     showView('sheet');
   }
 

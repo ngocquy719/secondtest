@@ -11,222 +11,221 @@
   </head>
   <body>
     <div class="app-root">
-      <header class="gs-header">
-        <div class="gs-header-left">
-          <span class="gs-brand">Realtime Sheet</span>
+      <header class="app-header">
+        <div class="app-header-left">
+          <button type="button" id="sidebar-toggle" class="app-hamburger" title="Menu" aria-label="Menu">☰</button>
+          <span class="app-brand">Realtime Sheet</span>
         </div>
-        <div class="gs-header-center">
-          <span id="top-sheet-name" class="gs-sheet-name" contenteditable="true" title="Sheet name"></span>
+        <div class="app-header-center">
+          <span id="top-sheet-name" class="app-sheet-name" contenteditable="true" title="Sheet name"></span>
         </div>
-        <div class="gs-header-right" id="top-user-wrap">
-          <button type="button" class="gs-btn-share" id="header-share-btn">Share</button>
-          <div class="gs-user-avatar" id="top-user-avatar"></div>
-          <span id="top-user-name" class="gs-user-name"></span>
-          <button type="button" id="top-logout-btn" class="gs-btn-text">Logout</button>
+        <div class="app-header-right" id="top-user-wrap">
+          <button type="button" class="app-btn-share" id="header-share-btn">Share</button>
+          <div class="app-user-avatar" id="top-user-avatar"></div>
+          <span id="top-user-name" class="app-user-name"></span>
+          <button type="button" id="top-logout-btn" class="app-btn-text">Logout</button>
         </div>
       </header>
 
-      <div class="gs-menu-bar" id="gs-menu-bar">
-        <div class="gs-menu-item" data-menu="file">File</div>
-        <div class="gs-menu-item" data-menu="edit">Edit</div>
-        <div class="gs-menu-item" data-menu="view">View</div>
-        <div class="gs-menu-item" data-menu="insert">Insert</div>
-        <div class="gs-menu-item" data-menu="format">Format</div>
-        <div class="gs-menu-item" data-menu="data">Data</div>
-        <div class="gs-menu-item" data-menu="tools">Tools</div>
-        <div class="gs-menu-item" data-menu="extensions">Extensions</div>
-        <div class="gs-menu-item" data-menu="help">Help</div>
+      <div class="menu-bar" id="gs-menu-bar">
+        <div class="menu-item" data-menu="file">File</div>
+        <div class="menu-item" data-menu="edit">Edit</div>
+        <div class="menu-item" data-menu="view">View</div>
+        <div class="menu-item" data-menu="insert">Insert</div>
+        <div class="menu-item" data-menu="format">Format</div>
+        <div class="menu-item" data-menu="data">Data</div>
+        <div class="menu-item" data-menu="tools">Tools</div>
+        <div class="menu-item" data-menu="extensions">Extensions</div>
+        <div class="menu-item" data-menu="help">Help</div>
       </div>
-      <div class="gs-menu-dropdowns" id="gs-menu-dropdowns">
-        <div class="gs-dropdown" id="dropdown-file">
-          <div class="gs-dropdown-item" data-action="placeholder">New</div>
-          <div class="gs-dropdown-item" data-action="placeholder">Open</div>
-          <div class="gs-dropdown-item" data-action="placeholder">Make a copy</div>
-          <div class="gs-dropdown-divider"></div>
-          <div class="gs-dropdown-item" data-action="permissions">Permissions</div>
-          <div class="gs-dropdown-item" data-action="history">Version history</div>
-          <div class="gs-dropdown-item" data-action="export">Download</div>
-          <div class="gs-dropdown-divider"></div>
-          <div class="gs-dropdown-item" data-action="placeholder">Print</div>
+      <div class="menu-dropdowns" id="gs-menu-dropdowns">
+        <div class="menu-dropdown" id="dropdown-file">
+          <div class="menu-dropdown-item" data-action="placeholder">New</div>
+          <div class="menu-dropdown-item" data-action="placeholder">Open</div>
+          <div class="menu-dropdown-item" data-action="placeholder">Make a copy</div>
+          <div class="menu-dropdown-divider"></div>
+          <div class="menu-dropdown-item" data-action="permissions">Permissions</div>
+          <div class="menu-dropdown-item" data-action="history">Version history</div>
+          <div class="menu-dropdown-item" data-action="export">Download</div>
+          <div class="menu-dropdown-divider"></div>
+          <div class="menu-dropdown-item" data-action="placeholder">Print</div>
         </div>
-        <div class="gs-dropdown" id="dropdown-edit">
-          <div class="gs-dropdown-item" data-action="placeholder">Undo</div>
-          <div class="gs-dropdown-item" data-action="placeholder">Redo</div>
-          <div class="gs-dropdown-divider"></div>
-          <div class="gs-dropdown-item" data-action="placeholder">Cut</div>
-          <div class="gs-dropdown-item" data-action="placeholder">Copy</div>
-          <div class="gs-dropdown-item" data-action="placeholder">Paste</div>
+        <div class="menu-dropdown" id="dropdown-edit">
+          <div class="menu-dropdown-item" data-action="placeholder">Undo</div>
+          <div class="menu-dropdown-item" data-action="placeholder">Redo</div>
+          <div class="menu-dropdown-divider"></div>
+          <div class="menu-dropdown-item" data-action="placeholder">Cut</div>
+          <div class="menu-dropdown-item" data-action="placeholder">Copy</div>
+          <div class="menu-dropdown-item" data-action="placeholder">Paste</div>
         </div>
-        <div class="gs-dropdown" id="dropdown-view">
-          <div class="gs-dropdown-item" data-action="placeholder">Full screen</div>
-          <div class="gs-dropdown-item" data-action="placeholder">Freeze</div>
+        <div class="menu-dropdown" id="dropdown-view">
+          <div class="menu-dropdown-item" data-action="placeholder">Full screen</div>
+          <div class="menu-dropdown-item" data-action="placeholder">Freeze</div>
         </div>
-        <div class="gs-dropdown" id="dropdown-insert">
-          <div class="gs-dropdown-item" data-action="insert-row-above">Row above</div>
-          <div class="gs-dropdown-item" data-action="insert-row-below">Row below</div>
-          <div class="gs-dropdown-item" data-action="insert-column-left">Column left</div>
-          <div class="gs-dropdown-item" data-action="insert-column-right">Column right</div>
+        <div class="menu-dropdown" id="dropdown-insert">
+          <div class="menu-dropdown-item" data-action="insert-row-above">Row above</div>
+          <div class="menu-dropdown-item" data-action="insert-row-below">Row below</div>
+          <div class="menu-dropdown-item" data-action="insert-column-left">Column left</div>
+          <div class="menu-dropdown-item" data-action="insert-column-right">Column right</div>
         </div>
-        <div class="gs-dropdown" id="dropdown-format">
-          <div class="gs-dropdown-item" data-action="placeholder">Number</div>
-          <div class="gs-dropdown-item" data-action="column-width">Column width</div>
-          <div class="gs-dropdown-item" data-action="column-visibility">Column visibility</div>
+        <div class="menu-dropdown" id="dropdown-format">
+          <div class="menu-dropdown-item" data-action="placeholder">Number</div>
+          <div class="menu-dropdown-item" data-action="column-width">Column width</div>
+          <div class="menu-dropdown-item" data-action="column-visibility">Column visibility</div>
         </div>
-        <div class="gs-dropdown" id="dropdown-data">
-          <div class="gs-dropdown-item" data-action="placeholder">Sort range</div>
-          <div class="gs-dropdown-item" data-action="placeholder">Filter</div>
+        <div class="menu-dropdown" id="dropdown-data">
+          <div class="menu-dropdown-item" data-action="placeholder">Sort range</div>
+          <div class="menu-dropdown-item" data-action="placeholder">Filter</div>
         </div>
-        <div class="gs-dropdown" id="dropdown-tools">
-          <div class="gs-dropdown-item" data-action="permissions">Permissions</div>
-          <div class="gs-dropdown-item" data-action="history">Version history</div>
-          <div class="gs-dropdown-item" data-action="export">Export</div>
+        <div class="menu-dropdown" id="dropdown-tools">
+          <div class="menu-dropdown-item" data-action="permissions">Permissions</div>
+          <div class="menu-dropdown-item" data-action="history">Version history</div>
+          <div class="menu-dropdown-item" data-action="export">Export</div>
         </div>
-        <div class="gs-dropdown" id="dropdown-extensions">
-          <div class="gs-dropdown-item" data-action="placeholder">Add-ons</div>
+        <div class="menu-dropdown" id="dropdown-extensions">
+          <div class="menu-dropdown-item" data-action="placeholder">Add-ons</div>
         </div>
-        <div class="gs-dropdown" id="dropdown-help">
-          <div class="gs-dropdown-item" data-action="placeholder">Help</div>
+        <div class="menu-dropdown" id="dropdown-help">
+          <div class="menu-dropdown-item" data-action="placeholder">Help</div>
         </div>
-      </div>
-
-      <div class="gs-toolbar" id="gs-toolbar">
-        <select class="gs-toolbar-font" id="toolbar-font"><option>Arial</option></select>
-        <select class="gs-toolbar-size" id="toolbar-size"><option>10</option><option>11</option><option>12</option></select>
-        <span class="gs-toolbar-sep"></span>
-        <button type="button" class="gs-toolbar-btn" id="toolbar-bold" title="Bold">B</button>
-        <button type="button" class="gs-toolbar-btn" id="toolbar-italic" title="Italic">I</button>
-        <button type="button" class="gs-toolbar-btn" id="toolbar-underline" title="Underline">U</button>
-        <span class="gs-toolbar-sep"></span>
-        <button type="button" class="gs-toolbar-btn gs-toolbar-color" id="toolbar-text-color" title="Text color">A</button>
-        <button type="button" class="gs-toolbar-btn gs-toolbar-fill" id="toolbar-fill" title="Fill color">▤</button>
-        <span class="gs-toolbar-sep"></span>
-        <button type="button" class="gs-toolbar-btn" id="toolbar-align-left" title="Align left">≡</button>
-        <button type="button" class="gs-toolbar-btn" id="toolbar-align-center" title="Align center">≡</button>
-        <button type="button" class="gs-toolbar-btn" id="toolbar-align-right" title="Align right">≡</button>
-        <span class="gs-toolbar-sep"></span>
-        <button type="button" class="gs-toolbar-btn" id="toolbar-filter" title="Filter">⊞</button>
-        <button type="button" class="gs-toolbar-btn" id="toolbar-sum" title="Sum">Σ</button>
       </div>
 
-      <div class="app-shell">
-        <aside class="gs-sidebar" id="sidebar">
-          <div class="gs-sidebar-header">
-            <button type="button" id="sidebar-toggle" class="gs-sidebar-toggle" title="Toggle sidebar">☰</button>
+      <div class="app-toolbar" id="gs-toolbar">
+        <select class="toolbar-font" id="toolbar-font"><option>Arial</option></select>
+        <select class="toolbar-size" id="toolbar-size"><option>10</option><option>11</option><option>12</option></select>
+        <span class="toolbar-sep"></span>
+        <button type="button" class="toolbar-btn" id="toolbar-bold" title="Bold">B</button>
+        <button type="button" class="toolbar-btn" id="toolbar-italic" title="Italic">I</button>
+        <button type="button" class="toolbar-btn" id="toolbar-underline" title="Underline">U</button>
+        <span class="toolbar-sep"></span>
+        <button type="button" class="toolbar-btn toolbar-color" id="toolbar-text-color" title="Text color">A</button>
+        <button type="button" class="toolbar-btn toolbar-fill" id="toolbar-fill" title="Fill color">▤</button>
+        <span class="toolbar-sep"></span>
+        <button type="button" class="toolbar-btn" id="toolbar-align-left" title="Align left">≡</button>
+        <button type="button" class="toolbar-btn" id="toolbar-align-center" title="Align center">≡</button>
+        <button type="button" class="toolbar-btn" id="toolbar-align-right" title="Align right">≡</button>
+        <span class="toolbar-sep"></span>
+        <button type="button" class="toolbar-btn" id="toolbar-filter" title="Filter">⊞</button>
+        <button type="button" class="toolbar-btn" id="toolbar-sum" title="Sum">Σ</button>
+      </div>
+
+      <main class="sheet-canvas">
+        <section id="view-login" class="canvas-view">
+          <div class="login-card">
+            <h2>Sign in</h2>
+            <form id="login-form">
+              <label>Username <input type="text" id="login-username" required /></label>
+              <label>Password <input type="password" id="login-password" required /></label>
+              <button type="submit">Login</button>
+              <p class="text-hint">Default: <code>admin</code> / <code>admin123</code></p>
+              <p id="login-error" class="text-error"></p>
+            </form>
           </div>
-          <nav class="gs-sidebar-nav">
-            <button type="button" class="gs-nav-item" data-view="home" id="nav-home"><span>Home</span></button>
-            <button type="button" class="gs-nav-item" data-view="my-sheets" id="nav-my-sheets"><span>My Sheets</span></button>
-            <button type="button" class="gs-nav-item" data-view="shared-sheets" id="nav-shared-sheets"><span>Shared Sheets</span></button>
-            <button type="button" class="gs-nav-item" data-view="users" id="nav-users" style="display:none"><span>User Management</span></button>
-            <button type="button" class="gs-nav-item" data-view="settings" id="nav-settings"><span>Settings</span></button>
-          </nav>
-          <div class="gs-sidebar-section">
-            <div class="gs-sidebar-section-title">Sheets</div>
-            <button type="button" id="create-sheet-btn" class="gs-btn-new-sheet">New sheet</button>
-            <ul id="sheets-list" class="gs-sheets-list"></ul>
+        </section>
+
+        <section id="view-home" class="canvas-view hidden">
+          <div class="canvas-inner">
+            <h1 class="canvas-title">Home</h1>
+            <button type="button" id="home-create-sheet-btn" class="btn-primary">Create new sheet</button>
+            <div class="home-section">
+              <h2>Recent</h2>
+              <ul id="home-recent-sheets" class="sheet-list"></ul>
+            </div>
+            <div class="home-section">
+              <h2>Shared with me</h2>
+              <ul id="home-shared-sheets" class="sheet-list"></ul>
+            </div>
           </div>
-        </aside>
+        </section>
 
-        <main class="gs-main">
-          <section id="view-login" class="gs-view">
-            <div class="gs-login-card">
-              <h2>Sign in</h2>
-              <form id="login-form">
-                <label>Username <input type="text" id="login-username" required /></label>
-                <label>Password <input type="password" id="login-password" required /></label>
-                <button type="submit">Login</button>
-                <p class="gs-hint">Default: <code>admin</code> / <code>admin123</code></p>
-                <p id="login-error" class="gs-error"></p>
-              </form>
-            </div>
-          </section>
+        <section id="view-my-sheets" class="canvas-view hidden">
+          <div class="canvas-inner">
+            <h1 class="canvas-title">My Sheets</h1>
+            <button type="button" id="my-create-sheet-btn" class="btn-primary">Create new sheet</button>
+            <table class="data-table">
+              <thead><tr><th>Name</th><th>Updated</th><th>Permission</th><th></th></tr></thead>
+              <tbody id="my-sheets-table-body"></tbody>
+            </table>
+          </div>
+        </section>
 
-          <section id="view-home" class="gs-view hidden">
-            <div class="gs-view-inner">
-              <h1 class="gs-view-title">Home</h1>
-              <button type="button" id="home-create-sheet-btn" class="gs-btn-primary">Create new sheet</button>
-              <div class="gs-home-section">
-                <h2>Recent</h2>
-                <ul id="home-recent-sheets" class="gs-sheet-list"></ul>
-              </div>
-              <div class="gs-home-section">
-                <h2>Shared with me</h2>
-                <ul id="home-shared-sheets" class="gs-sheet-list"></ul>
-              </div>
-            </div>
-          </section>
+        <section id="view-shared-sheets" class="canvas-view hidden">
+          <div class="canvas-inner">
+            <h1 class="canvas-title">Shared Sheets</h1>
+            <table class="data-table">
+              <thead><tr><th>Name</th><th>Owner</th><th>Permission</th><th>Updated</th><th></th></tr></thead>
+              <tbody id="shared-sheets-table-body"></tbody>
+            </table>
+          </div>
+        </section>
 
-          <section id="view-my-sheets" class="gs-view hidden">
-            <div class="gs-view-inner">
-              <h1 class="gs-view-title">My Sheets</h1>
-              <button type="button" id="my-create-sheet-btn" class="gs-btn-primary">Create new sheet</button>
-              <table class="gs-table">
-                <thead><tr><th>Name</th><th>Updated</th><th>Permission</th><th></th></tr></thead>
-                <tbody id="my-sheets-table-body"></tbody>
-              </table>
+        <section id="view-users" class="canvas-view hidden">
+          <div class="canvas-inner">
+            <h1 class="canvas-title">User Management</h1>
+            <div class="user-create-row">
+              <input type="text" id="um-username" placeholder="Username" />
+              <input type="password" id="um-password" placeholder="Password" />
+              <select id="um-role"><option value="leader">Leader</option><option value="user">User</option></select>
+              <button type="button" id="um-create-btn" class="btn-primary">Create user</button>
             </div>
-          </section>
+            <p id="um-message" class="text-info"></p>
+            <table class="data-table">
+              <thead><tr><th>Username</th><th>Role</th><th>Created by</th><th></th></tr></thead>
+              <tbody id="um-table-body"></tbody>
+            </table>
+          </div>
+        </section>
 
-          <section id="view-shared-sheets" class="gs-view hidden">
-            <div class="gs-view-inner">
-              <h1 class="gs-view-title">Shared Sheets</h1>
-              <table class="gs-table">
-                <thead><tr><th>Name</th><th>Owner</th><th>Permission</th><th>Updated</th><th></th></tr></thead>
-                <tbody id="shared-sheets-table-body"></tbody>
-              </table>
-            </div>
-          </section>
+        <section id="view-settings" class="canvas-view hidden">
+          <div class="canvas-inner">
+            <h1 class="canvas-title">Settings</h1>
+            <p class="text-hint">Profile and app settings.</p>
+          </div>
+        </section>
 
-          <section id="view-users" class="gs-view hidden">
-            <div class="gs-view-inner">
-              <h1 class="gs-view-title">User Management</h1>
-              <div class="gs-user-create">
-                <input type="text" id="um-username" placeholder="Username" />
-                <input type="password" id="um-password" placeholder="Password" />
-                <select id="um-role"><option value="leader">Leader</option><option value="user">User</option></select>
-                <button type="button" id="um-create-btn" class="gs-btn-primary">Create user</button>
-              </div>
-              <p id="um-message" class="gs-info"></p>
-              <table class="gs-table">
-                <thead><tr><th>Username</th><th>Role</th><th>Created by</th><th></th></tr></thead>
-                <tbody id="um-table-body"></tbody>
-              </table>
-            </div>
-          </section>
-
-          <section id="view-settings" class="gs-view hidden">
-            <div class="gs-view-inner">
-              <h1 class="gs-view-title">Settings</h1>
-              <p class="gs-hint">Profile and app settings.</p>
-            </div>
-          </section>
-
-          <section id="view-sheet" class="gs-view hidden">
-            <div class="gs-formula-bar">
-              <span class="gs-formula-fx">fx</span>
-              <input type="text" class="gs-formula-input" id="formula-input" placeholder="Enter formula or value" readonly />
-              <span id="current-cell-ref" class="gs-cell-ref">A1</span>
-              <span id="current-cell-meta" class="gs-cell-meta"></span>
-            </div>
-            <div class="gs-sheet-container">
-              <div id="luckysheet" class="luckysheet-wrap"></div>
-            </div>
-          </section>
-        </main>
-      </div>
+        <section id="view-sheet" class="canvas-view hidden">
+          <div class="formula-bar">
+            <span class="formula-fx">fx</span>
+            <input type="text" class="formula-input" id="formula-input" placeholder="Enter formula or value" readonly />
+            <span id="current-cell-ref" class="cell-ref">A1</span>
+            <span id="current-cell-meta" class="cell-meta"></span>
+          </div>
+          <div class="grid-container">
+            <div id="luckysheet" class="luckysheet-wrap"></div>
+          </div>
+        </section>
+      </main>
     </div>
 
-    <div id="share-modal" class="gs-modal hidden">
-      <div class="gs-modal-backdrop"></div>
-      <div class="gs-modal-dialog">
+    <div id="sidebar-overlay" class="overlay-sidebar">
+      <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+      <aside id="sidebar" class="sidebar-panel">
+        <nav class="sidebar-nav">
+          <button type="button" class="sidebar-nav-item" data-view="home" id="nav-home"><span>Home</span></button>
+          <button type="button" class="sidebar-nav-item" data-view="my-sheets" id="nav-my-sheets"><span>My Sheets</span></button>
+          <button type="button" class="sidebar-nav-item" data-view="shared-sheets" id="nav-shared-sheets"><span>Shared Sheets</span></button>
+          <button type="button" class="sidebar-nav-item" data-view="users" id="nav-users" style="display:none"><span>User Management</span></button>
+          <button type="button" class="sidebar-nav-item" data-view="settings" id="nav-settings"><span>Settings</span></button>
+        </nav>
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Sheets</div>
+          <button type="button" id="create-sheet-btn" class="btn-new-sheet">New sheet</button>
+          <ul id="sheets-list" class="sidebar-sheets-list"></ul>
+        </div>
+      </aside>
+    </div>
+
+    <div id="share-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-dialog">
         <h3>Share</h3>
         <form id="share-form">
           <label>User <select id="share-user-id"><option value="">Select user</option></select></label>
           <label>Role <select id="share-role"><option value="editor">Editor</option><option value="viewer">Viewer</option></select></label>
-          <p id="share-message" class="gs-info"></p>
-          <div class="gs-modal-actions">
-            <button type="button" class="gs-btn-text" id="share-cancel">Cancel</button>
-            <button type="submit" class="gs-btn-primary">Share</button>
+          <p id="share-message" class="text-info"></p>
+          <div class="modal-actions">
+            <button type="button" class="app-btn-text" id="share-cancel">Cancel</button>
+            <button type="submit" class="btn-primary">Share</button>
           </div>
         </form>
       </div>
