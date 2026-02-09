@@ -10,10 +10,19 @@
   const lastCellValues = {};
   let lastSelectedCell = { r: 0, c: 0 };
 
-  // Top bar
   const topUserNameEl = document.getElementById('top-user-name');
   const topLogoutBtn = document.getElementById('top-logout-btn');
   const topSheetNameEl = document.getElementById('top-sheet-name');
+  const topUserAvatar = document.getElementById('top-user-avatar');
+  const headerShareBtn = document.getElementById('header-share-btn');
+  const shareModal = document.getElementById('share-modal');
+  const shareForm = document.getElementById('share-form');
+  const shareUserId = document.getElementById('share-user-id');
+  const shareRoleSelect = document.getElementById('share-role');
+  const shareMessage = document.getElementById('share-message');
+  const shareCancelBtn = document.getElementById('share-cancel');
+  const menuBar = document.getElementById('gs-menu-bar');
+  const menuDropdowns = document.getElementById('gs-menu-dropdowns');
 
   // Sidebar
   const sidebarEl = document.getElementById('sidebar');
@@ -117,11 +126,15 @@
     const navItems = [navHome, navMySheets, navSharedSheets, navUsers, navSettings];
     navItems.forEach((n) => n && n.classList.remove('active'));
 
+    document.body.classList.toggle('gs-view-sheet', viewName === 'sheet');
+
     switch (viewName) {
       case 'login':
+        document.body.classList.remove('gs-logged-in');
         if (viewLogin) viewLogin.classList.remove('hidden');
         if (topUserNameEl) topUserNameEl.textContent = '';
         if (topSheetNameEl) topSheetNameEl.textContent = '';
+        if (topUserAvatar) topUserAvatar.textContent = '';
         break;
       case 'home':
         if (viewHome) viewHome.classList.remove('hidden');
@@ -163,7 +176,9 @@
     try {
       const data = await apiRequest('/auth/me');
       currentUser = data.user;
+      document.body.classList.add('gs-logged-in');
       if (topUserNameEl) topUserNameEl.textContent = `${currentUser.username} (${currentUser.role})`;
+      if (topUserAvatar) topUserAvatar.textContent = (currentUser.username || '').charAt(0).toUpperCase();
       if (navUsers) {
         navUsers.style.display = (currentUser.role === 'admin' || currentUser.role === 'leader') ? '' : 'none';
       }
@@ -188,7 +203,9 @@
         }
       });
       setAuth(data.token, data.user);
+      document.body.classList.add('gs-logged-in');
       if (topUserNameEl) topUserNameEl.textContent = `${data.user.username} (${data.user.role})`;
+      if (topUserAvatar) topUserAvatar.textContent = (data.user.username || '').charAt(0).toUpperCase();
       if (navUsers) navUsers.style.display = (data.user.role === 'admin' || data.user.role === 'leader') ? '' : 'none';
       connectSocket();
       await loadHome();
@@ -395,6 +412,78 @@
   if (navSettings) navSettings.addEventListener('click', () => {
     showView('settings');
   });
+
+  if (menuBar && menuDropdowns) {
+    menuBar.querySelectorAll('.gs-menu-item').forEach((item) => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const menu = item.dataset.menu;
+        const dropdown = document.getElementById('dropdown-' + menu);
+        const open = dropdown && dropdown.classList.toggle('open');
+        menuDropdowns.querySelectorAll('.gs-dropdown').forEach((d) => {
+          if (d !== dropdown) d.classList.remove('open');
+        });
+        if (dropdown && open) {
+          const rect = item.getBoundingClientRect();
+          dropdown.style.left = rect.left + 'px';
+          dropdown.style.top = (rect.bottom + 2) + 'px';
+        }
+      });
+    });
+    document.addEventListener('click', () => {
+      menuDropdowns.querySelectorAll('.gs-dropdown').forEach((d) => d.classList.remove('open'));
+    });
+    menuDropdowns.addEventListener('click', (e) => e.stopPropagation());
+  }
+
+  if (headerShareBtn) {
+    headerShareBtn.addEventListener('click', async () => {
+      if (!currentSheetId || !shareModal) return;
+      shareMessage.textContent = '';
+      shareUserId.innerHTML = '<option value="">Select user</option>';
+      try {
+        const data = await apiRequest('/users');
+        (data.users || []).forEach((u) => {
+          if (u.id === currentUser.id) return;
+          const opt = document.createElement('option');
+          opt.value = u.id;
+          opt.textContent = u.username;
+          shareUserId.appendChild(opt);
+        });
+        shareModal.classList.remove('hidden');
+      } catch (err) {
+        shareMessage.textContent = err.message;
+      }
+    });
+  }
+  if (shareCancelBtn && shareModal) {
+    shareCancelBtn.addEventListener('click', () => shareModal.classList.add('hidden'));
+  }
+  if (shareModal) {
+    shareModal.querySelector('.gs-modal-backdrop').addEventListener('click', () => shareModal.classList.add('hidden'));
+  }
+  if (shareForm) {
+    shareForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentSheetId || !shareUserId || !shareRoleSelect) return;
+      const userId = Number(shareUserId.value);
+      if (!userId) {
+        shareMessage.textContent = 'Select a user';
+        return;
+      }
+      shareMessage.textContent = '';
+      try {
+        await apiRequest(`/sheets/${currentSheetId}/share`, {
+          method: 'POST',
+          body: { userId, role: shareRoleSelect.value }
+        });
+        shareMessage.textContent = 'Shared successfully.';
+        shareModal.classList.add('hidden');
+      } catch (err) {
+        shareMessage.textContent = err.message;
+      }
+    });
+  }
 
   async function loadMySheets() {
     if (!mySheetsTableBody) return;
