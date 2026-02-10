@@ -994,11 +994,8 @@
     }
     luckysheetInitialized = false;
 
-    if (window.SheetManager) {
-      SheetManager.setDocument(sheetId, tabs, currentPermission);
-      setActiveSheetId(tabs[0].id);
-    }
-    createLuckysheetWithTabs(getSheets());
+    // Initialize Luckysheet once with server-provided tabs (native multi-sheet support).
+    createLuckysheetWithTabs(tabs);
 
     if (socket && socket.connected) {
       socket.emit('join_sheet', { sheetId });
