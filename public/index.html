@@ -27,20 +27,111 @@
         </div>
       </header>
 
-      <div class="menu-bar" id="gs-menu-bar">
-        <div class="menu-item" data-menu="file">File</div>
-        <div class="menu-item" data-menu="edit">Edit</div>
-        <div class="menu-item" data-menu="view">View</div>
-        <div class="menu-item" data-menu="insert">Insert</div>
-        <div class="menu-item" data-menu="format">Format</div>
-        <div class="menu-item" data-menu="data">Data</div>
-        <div class="menu-item" data-menu="tools">Tools</div>
-        <div class="menu-item" data-menu="extensions">Extensions</div>
-        <div class="menu-item" data-menu="help">Help</div>
+      <div class="ribbon">
+        <div class="ribbon-tabs" id="ribbon-tabs">
+          <div class="ribbon-tab" data-tab="file">File</div>
+          <div class="ribbon-tab active" data-tab="home">Home</div>
+          <div class="ribbon-tab" data-tab="insert">Insert</div>
+          <div class="ribbon-tab" data-tab="page-layout">Page Layout</div>
+          <div class="ribbon-tab" data-tab="formulas">Formulas</div>
+          <div class="ribbon-tab" data-tab="data">Data</div>
+          <div class="ribbon-tab" data-tab="review">Review</div>
+          <div class="ribbon-tab" data-tab="view">View</div>
+        </div>
+        <div class="ribbon-content">
+          <div class="ribbon-panel" id="ribbon-file" style="display:none"></div>
+          <div class="ribbon-panel active" id="ribbon-home">
+            <div class="ribbon-group">
+              <span class="ribbon-group-label">Clipboard</span>
+              <div class="ribbon-group-btns">
+                <button type="button" class="ribbon-btn" title="Paste">Paste</button>
+                <button type="button" class="ribbon-btn" title="Cut">Cut</button>
+                <button type="button" class="ribbon-btn" title="Copy">Copy</button>
+              </div>
+            </div>
+            <div class="ribbon-group">
+              <span class="ribbon-group-label">Font</span>
+              <div class="ribbon-group-btns">
+                <select class="ribbon-select" id="toolbar-font"><option>Arial</option></select>
+                <select class="ribbon-select ribbon-select-narrow" id="toolbar-size"><option>10</option><option>11</option><option>12</option></select>
+                <button type="button" class="ribbon-btn" id="toolbar-bold" title="Bold"><b>B</b></button>
+                <button type="button" class="ribbon-btn" id="toolbar-italic" title="Italic"><i>I</i></button>
+                <button type="button" class="ribbon-btn" id="toolbar-underline" title="Underline"><u>U</u></button>
+                <button type="button" class="ribbon-btn" id="toolbar-text-color" title="Text color">A</button>
+                <button type="button" class="ribbon-btn" id="toolbar-fill" title="Fill color">▤</button>
+              </div>
+            </div>
+            <div class="ribbon-group">
+              <span class="ribbon-group-label">Alignment</span>
+              <div class="ribbon-group-btns">
+                <button type="button" class="ribbon-btn" id="toolbar-align-left" title="Align left">≡</button>
+                <button type="button" class="ribbon-btn" id="toolbar-align-center" title="Align center">≡</button>
+                <button type="button" class="ribbon-btn" id="toolbar-align-right" title="Align right">≡</button>
+                <button type="button" class="ribbon-btn" id="toolbar-filter" title="Filter">⊞</button>
+                <button type="button" class="ribbon-btn" id="toolbar-sum" title="Sum">Σ</button>
+              </div>
+            </div>
+          </div>
+          <div class="ribbon-panel" id="ribbon-insert">
+            <div class="ribbon-group">
+              <span class="ribbon-group-label">Rows & Columns</span>
+              <div class="ribbon-group-btns">
+                <button type="button" class="ribbon-btn" data-action="insert-row-above">Row above</button>
+                <button type="button" class="ribbon-btn" data-action="insert-row-below">Row below</button>
+                <button type="button" class="ribbon-btn" data-action="insert-column-left">Column left</button>
+                <button type="button" class="ribbon-btn" data-action="insert-column-right">Column right</button>
+              </div>
+            </div>
+          </div>
+          <div class="ribbon-panel" id="ribbon-page-layout">
+            <div class="ribbon-group">
+              <span class="ribbon-group-label">Sheet Options</span>
+              <div class="ribbon-group-btns">
+                <button type="button" class="ribbon-btn" data-action="column-width">Column width</button>
+                <button type="button" class="ribbon-btn" data-action="column-visibility">Column visibility</button>
+              </div>
+            </div>
+          </div>
+          <div class="ribbon-panel" id="ribbon-formulas">
+            <div class="ribbon-group">
+              <span class="ribbon-group-label">Function</span>
+              <div class="ribbon-group-btns">
+                <button type="button" class="ribbon-btn toolbar-sum" title="Sum">Σ Sum</button>
+              </div>
+            </div>
+          </div>
+          <div class="ribbon-panel" id="ribbon-data">
+            <div class="ribbon-group">
+              <span class="ribbon-group-label">Sort & Filter</span>
+              <div class="ribbon-group-btns">
+                <button type="button" class="ribbon-btn" data-action="placeholder">Sort A to Z</button>
+                <button type="button" class="ribbon-btn" data-action="placeholder">Filter</button>
+              </div>
+            </div>
+          </div>
+          <div class="ribbon-panel" id="ribbon-review">
+            <div class="ribbon-group">
+              <span class="ribbon-group-label">Share</span>
+              <div class="ribbon-group-btns">
+                <button type="button" class="ribbon-btn" data-action="permissions">Permissions</button>
+                <button type="button" class="ribbon-btn" data-action="history">Version history</button>
+              </div>
+            </div>
+          </div>
+          <div class="ribbon-panel" id="ribbon-view">
+            <div class="ribbon-group">
+              <span class="ribbon-group-label">View</span>
+              <div class="ribbon-group-btns">
+                <button type="button" class="ribbon-btn" data-action="placeholder">Full screen</button>
+                <button type="button" class="ribbon-btn" data-action="placeholder">Freeze</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="menu-dropdowns" id="gs-menu-dropdowns">
         <div class="menu-dropdown" id="dropdown-file">
-          <div class="menu-dropdown-item" data-action="placeholder">New</div>
+          <div class="menu-dropdown-item" data-action="new-sheet">New</div>
           <div class="menu-dropdown-item" data-action="placeholder">Open</div>
           <div class="menu-dropdown-item" data-action="placeholder">Make a copy</div>
           <div class="menu-dropdown-divider"></div>
@@ -50,63 +141,6 @@
           <div class="menu-dropdown-divider"></div>
           <div class="menu-dropdown-item" data-action="placeholder">Print</div>
         </div>
-        <div class="menu-dropdown" id="dropdown-edit">
-          <div class="menu-dropdown-item" data-action="placeholder">Undo</div>
-          <div class="menu-dropdown-item" data-action="placeholder">Redo</div>
-          <div class="menu-dropdown-divider"></div>
-          <div class="menu-dropdown-item" data-action="placeholder">Cut</div>
-          <div class="menu-dropdown-item" data-action="placeholder">Copy</div>
-          <div class="menu-dropdown-item" data-action="placeholder">Paste</div>
-        </div>
-        <div class="menu-dropdown" id="dropdown-view">
-          <div class="menu-dropdown-item" data-action="placeholder">Full screen</div>
-          <div class="menu-dropdown-item" data-action="placeholder">Freeze</div>
-        </div>
-        <div class="menu-dropdown" id="dropdown-insert">
-          <div class="menu-dropdown-item" data-action="insert-row-above">Row above</div>
-          <div class="menu-dropdown-item" data-action="insert-row-below">Row below</div>
-          <div class="menu-dropdown-item" data-action="insert-column-left">Column left</div>
-          <div class="menu-dropdown-item" data-action="insert-column-right">Column right</div>
-        </div>
-        <div class="menu-dropdown" id="dropdown-format">
-          <div class="menu-dropdown-item" data-action="placeholder">Number</div>
-          <div class="menu-dropdown-item" data-action="column-width">Column width</div>
-          <div class="menu-dropdown-item" data-action="column-visibility">Column visibility</div>
-        </div>
-        <div class="menu-dropdown" id="dropdown-data">
-          <div class="menu-dropdown-item" data-action="placeholder">Sort range</div>
-          <div class="menu-dropdown-item" data-action="placeholder">Filter</div>
-        </div>
-        <div class="menu-dropdown" id="dropdown-tools">
-          <div class="menu-dropdown-item" data-action="permissions">Permissions</div>
-          <div class="menu-dropdown-item" data-action="history">Version history</div>
-          <div class="menu-dropdown-item" data-action="export">Export</div>
-        </div>
-        <div class="menu-dropdown" id="dropdown-extensions">
-          <div class="menu-dropdown-item" data-action="placeholder">Add-ons</div>
-        </div>
-        <div class="menu-dropdown" id="dropdown-help">
-          <div class="menu-dropdown-item" data-action="placeholder">Help</div>
-        </div>
-      </div>
-
-      <div class="app-toolbar" id="gs-toolbar">
-        <select class="toolbar-font" id="toolbar-font"><option>Arial</option></select>
-        <select class="toolbar-size" id="toolbar-size"><option>10</option><option>11</option><option>12</option></select>
-        <span class="toolbar-sep"></span>
-        <button type="button" class="toolbar-btn" id="toolbar-bold" title="Bold">B</button>
-        <button type="button" class="toolbar-btn" id="toolbar-italic" title="Italic">I</button>
-        <button type="button" class="toolbar-btn" id="toolbar-underline" title="Underline">U</button>
-        <span class="toolbar-sep"></span>
-        <button type="button" class="toolbar-btn toolbar-color" id="toolbar-text-color" title="Text color">A</button>
-        <button type="button" class="toolbar-btn toolbar-fill" id="toolbar-fill" title="Fill color">▤</button>
-        <span class="toolbar-sep"></span>
-        <button type="button" class="toolbar-btn" id="toolbar-align-left" title="Align left">≡</button>
-        <button type="button" class="toolbar-btn" id="toolbar-align-center" title="Align center">≡</button>
-        <button type="button" class="toolbar-btn" id="toolbar-align-right" title="Align right">≡</button>
-        <span class="toolbar-sep"></span>
-        <button type="button" class="toolbar-btn" id="toolbar-filter" title="Filter">⊞</button>
-        <button type="button" class="toolbar-btn" id="toolbar-sum" title="Sum">Σ</button>
       </div>
 
       <main class="sheet-canvas">
@@ -192,6 +226,12 @@
           </div>
           <div class="grid-container">
             <div id="luckysheet" class="luckysheet-wrap"></div>
+          </div>
+          <div class="sheet-tabs-bar">
+            <div class="sheet-tabs-scroll" id="sheet-tabs-scroll">
+              <div class="sheet-tabs-list" id="sheet-tabs-list"></div>
+              <button type="button" class="sheet-tab-add" id="sheet-tab-add" title="New sheet">+</button>
+            </div>
           </div>
         </section>
       </main>

@@ -205,6 +205,46 @@ router.get('/:id/cell-meta', (req, res) => {
   );
 });
 
+// Rename sheet (owner or editor)
+router.patch('/:id', (req, res) => {
+  const current = req.user;
+  const sheetId = Number(req.params.id);
+  const { name } = req.body;
+
+  if (Number.isNaN(sheetId)) {
+    return res.status(400).json({ error: 'Invalid sheet id' });
+  }
+  if (typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
+  db.get(
+    `SELECT sp.role FROM sheet_permissions sp
+     WHERE sp.sheet_id = ? AND sp.user_id = ?`,
+    [sheetId, current.id],
+    (err, perm) => {
+      if (err) {
+        console.error('sheet rename perm error', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+      if (!perm || (perm.role !== 'owner' && perm.role !== 'editor')) {
+        return res.status(403).json({ error: 'No permission to rename' });
+      }
+      db.run(
+        `UPDATE sheets SET name = ?, updated_at = ? WHERE id = ?`,
+        [name.trim(), new Date().toISOString(), sheetId],
+        (err2) => {
+          if (err2) {
+            console.error('sheet rename error', err2);
+            return res.status(500).json({ error: 'Internal server error' });
+          }
+          res.json({ ok: true });
+        }
+      );
+    }
+  );
+});
+
 // Share sheet with another user (editor / viewer)
 router.post('/:id/share', (req, res) => {
   const current = req.user;

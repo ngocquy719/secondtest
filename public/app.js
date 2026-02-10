@@ -21,8 +21,11 @@
   const shareRoleSelect = document.getElementById('share-role');
   const shareMessage = document.getElementById('share-message');
   const shareCancelBtn = document.getElementById('share-cancel');
-  const menuBar = document.getElementById('gs-menu-bar');
   const menuDropdowns = document.getElementById('gs-menu-dropdowns');
+  const ribbonTabs = document.getElementById('ribbon-tabs');
+  const sheetTabsList = document.getElementById('sheet-tabs-list');
+  const sheetTabAddBtn = document.getElementById('sheet-tab-add');
+  let sheetsForTabs = [];
 
   const sidebarOverlay = document.getElementById('sidebar-overlay');
   const sidebarBackdrop = document.getElementById('sidebar-backdrop');
@@ -291,27 +294,55 @@
   }
 
   async function loadSheetsList() {
-    if (!sheetsListEl) return;
     try {
       const data = await apiRequest('/sheets');
-      sheetsListEl.innerHTML = '';
-      (data.sheets || []).forEach((s) => {
-        const li = document.createElement('li');
-        li.dataset.id = String(s.id);
-        li.textContent = s.name || 'Sheet';
-
-        const perm = document.createElement('span');
-        perm.className = 'sheet-permission';
-        perm.textContent = s.permission;
-        li.appendChild(perm);
-
-        li.addEventListener('click', () => openSheetView(s.id, s.permission));
-
-        sheetsListEl.appendChild(li);
-      });
+      sheetsForTabs = data.sheets || [];
+      if (sheetsListEl) {
+        sheetsListEl.innerHTML = '';
+        sheetsForTabs.forEach((s) => {
+          const li = document.createElement('li');
+          li.dataset.id = String(s.id);
+          li.textContent = s.name || 'Sheet';
+          const perm = document.createElement('span');
+          perm.className = 'sheet-permission';
+          perm.textContent = s.permission;
+          li.appendChild(perm);
+          li.addEventListener('click', () => openSheetView(s.id, s.permission));
+          sheetsListEl.appendChild(li);
+        });
+      }
+      renderSheetTabs();
     } catch (err) {
       console.error('Failed to load sheets', err);
     }
+  }
+
+  function renderSheetTabs() {
+    if (!sheetTabsList) return;
+    sheetTabsList.innerHTML = '';
+    sheetsForTabs.forEach((s) => {
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'sheet-tab' + (s.id === currentSheetId ? ' active' : '');
+      tab.dataset.id = String(s.id);
+      tab.textContent = s.name || 'Sheet';
+      tab.title = s.name || 'Sheet';
+      tab.addEventListener('click', () => openSheetView(s.id, s.permission));
+      tab.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        const newName = prompt('Rename sheet', s.name || 'Sheet');
+        if (newName == null || newName.trim() === '') return;
+        apiRequest(`/sheets/${s.id}`, { method: 'PATCH', body: { name: newName.trim() } })
+          .then(() => {
+            s.name = newName.trim();
+            tab.textContent = s.name;
+            tab.title = s.name;
+            if (currentSheetId === s.id && topSheetNameEl) topSheetNameEl.textContent = s.name;
+          })
+          .catch((err) => alert(err.message));
+      });
+      sheetTabsList.appendChild(tab);
+    });
   }
 
   if (createSheetBtn) {
@@ -426,27 +457,78 @@
     closeSidebar();
   });
 
-  if (menuBar && menuDropdowns) {
-    menuBar.querySelectorAll('.menu-item').forEach((item) => {
-      item.addEventListener('click', (e) => {
+  if (ribbonTabs) {
+    ribbonTabs.querySelectorAll('.ribbon-tab').forEach((tabEl) => {
+      tabEl.addEventListener('click', (e) => {
         e.stopPropagation();
-        const menu = item.dataset.menu;
-        const dropdown = document.getElementById('dropdown-' + menu);
-        const open = dropdown && dropdown.classList.toggle('open');
-        menuDropdowns.querySelectorAll('.menu-dropdown').forEach((d) => {
-          if (d !== dropdown) d.classList.remove('open');
-        });
-        if (dropdown && open) {
-          const rect = item.getBoundingClientRect();
-          dropdown.style.left = rect.left + 'px';
-          dropdown.style.top = (rect.bottom + 2) + 'px';
+        const tab = tabEl.dataset.tab;
+        if (tab === 'file') {
+          const dropdown = document.getElementById('dropdown-file');
+          const open = dropdown && dropdown.classList.toggle('open');
+          menuDropdowns.querySelectorAll('.menu-dropdown').forEach((d) => d.classList.remove('open'));
+          if (dropdown && open) {
+            const rect = tabEl.getBoundingClientRect();
+            dropdown.style.left = rect.left + 'px';
+            dropdown.style.top = (rect.bottom + 2) + 'px';
+            dropdown.classList.add('open');
+          }
+          return;
         }
+        ribbonTabs.querySelectorAll('.ribbon-tab').forEach((t) => t.classList.remove('active'));
+        tabEl.classList.add('active');
+        document.querySelectorAll('.ribbon-panel').forEach((p) => p.classList.remove('active'));
+        const panel = document.getElementById('ribbon-' + tab);
+        if (panel) panel.classList.add('active');
       });
     });
-    document.addEventListener('click', () => {
-      menuDropdowns.querySelectorAll('.menu-dropdown').forEach((d) => d.classList.remove('open'));
-    });
+  }
+  document.addEventListener('click', () => {
+    if (menuDropdowns) menuDropdowns.querySelectorAll('.menu-dropdown').forEach((d) => d.classList.remove('open'));
+  });
+  if (menuDropdowns) {
     menuDropdowns.addEventListener('click', (e) => e.stopPropagation());
+    menuDropdowns.addEventListener('click', (e) => {
+      const item = e.target.closest('.menu-dropdown-item');
+      if (!item) return;
+      const action = item.dataset.action;
+      menuDropdowns.querySelectorAll('.menu-dropdown').forEach((d) => d.classList.remove('open'));
+      if (action === 'new-sheet') {
+        (async () => {
+          try {
+            const name = prompt('Sheet name?', 'Sheet1');
+            const data = await apiRequest('/sheets', { method: 'POST', body: { name: name || 'Sheet1' } });
+            await loadSheetsList();
+            openSheetView(data.sheet.id, 'owner');
+          } catch (err) { alert(err.message); }
+        })();
+      }
+      if (action === 'permissions' && headerShareBtn) headerShareBtn.click();
+    });
+  }
+
+  document.querySelectorAll('.ribbon-panel').forEach((panel) => {
+    panel.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      if (action === 'insert-row-above' || action === 'insert-row-below' || action === 'insert-column-left' || action === 'insert-column-right') return;
+      if (action === 'permissions') { if (headerShareBtn) headerShareBtn.click(); return; }
+      if (action === 'history' || action === 'export') return;
+    });
+  });
+
+  if (sheetTabAddBtn) {
+    sheetTabAddBtn.addEventListener('click', async () => {
+      try {
+        const name = prompt('Sheet name?', 'Sheet' + (sheetsForTabs.length + 1));
+        const data = await apiRequest('/sheets', { method: 'POST', body: { name: name || 'Sheet1' } });
+        sheetsForTabs.push({ id: data.sheet.id, name: data.sheet.name || 'Sheet1', permission: 'owner' });
+        await loadSheetsList();
+        openSheetView(data.sheet.id, 'owner');
+      } catch (err) {
+        alert(err.message);
+      }
+    });
   }
 
   if (headerShareBtn) {
@@ -705,6 +787,7 @@
     }
 
     if (sidebarOverlay) sidebarOverlay.classList.remove('open');
+    renderSheetTabs();
     showView('sheet');
   }
 

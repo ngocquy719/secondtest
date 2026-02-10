@@ -110,27 +110,88 @@ html, body {
 }
 .app-user-name { font-size: 14px; color: #202124; }
 
-/* --- MenuBar --- */
-.menu-bar {
-  height: 32px;
-  padding: 0 8px;
-  display: flex;
-  align-items: center;
-  gap: 2px;
+/* --- Ribbon (Excel-like) --- */
+.ribbon {
   flex-shrink: 0;
   background: #fff;
   border-bottom: 1px solid #dadce0;
 }
-.menu-item {
-  padding: 4px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
+.ribbon-tabs {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  height: 32px;
+  gap: 2px;
+}
+.ribbon-tab {
+  padding: 6px 14px;
+  font-size: 13px;
   color: #202124;
+  cursor: pointer;
   border: none;
   background: transparent;
+  border-radius: 2px;
 }
-.menu-item:hover { background: #f1f3f4; }
+.ribbon-tab:hover { background: #f1f3f4; }
+.ribbon-tab.active {
+  background: #fff;
+  font-weight: 500;
+  box-shadow: 0 -1px 0 0 #dadce0 inset;
+}
+.ribbon-content {
+  min-height: 44px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-top: 1px solid #e8eaed;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 16px;
+}
+.ribbon-panel {
+  display: none;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 16px;
+}
+.ribbon-panel.active { display: flex; }
+.ribbon-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 12px;
+  border-right: 1px solid #e8eaed;
+}
+.ribbon-group:last-child { border-right: none; padding-right: 0; }
+.ribbon-group-label {
+  font-size: 11px;
+  color: #5f6368;
+  margin-right: 4px;
+}
+.ribbon-group-btns {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.ribbon-btn {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  font-size: 13px;
+  cursor: pointer;
+  min-height: 28px;
+}
+.ribbon-btn:hover { background: #e8eaed; }
+.ribbon-select {
+  padding: 2px 8px;
+  border: 1px solid #dadce0;
+  border-radius: 2px;
+  font-size: 12px;
+  background: #fff;
+  min-height: 24px;
+}
+.ribbon-select-narrow { width: 48px; }
 
 .menu-dropdowns {
   position: fixed;
@@ -159,42 +220,6 @@ html, body {
 }
 .menu-dropdown-item:hover { background: #f1f3f4; }
 .menu-dropdown-divider { height: 1px; background: #e8eaed; margin: 6px 0; }
-
-/* --- Toolbar --- */
-.app-toolbar {
-  height: 40px;
-  padding: 0 12px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  background: #fff;
-  border-bottom: 1px solid #dadce0;
-}
-.toolbar-font, .toolbar-size {
-  padding: 4px 8px;
-  border: 1px solid #dadce0;
-  border-radius: 4px;
-  font-size: 13px;
-  background: #fff;
-  margin-right: 4px;
-}
-.toolbar-sep { width: 1px; height: 24px; background: #dadce0; margin: 0 4px; }
-.toolbar-btn {
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  cursor: pointer;
-  font-size: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.toolbar-btn:hover { background: #f1f3f4; }
-.toolbar-color { border-bottom: 2px solid #1a73e8; }
-.toolbar-fill { background: #f1f3f4; }
 
 /* --- SheetCanvas: full viewport below header --- */
 .sheet-canvas {
@@ -358,6 +383,67 @@ html, body {
   min-height: 300px;
 }
 
+/* --- Sheet tabs bar (Excel-like bottom tabs) --- */
+.sheet-tabs-bar {
+  flex-shrink: 0;
+  height: 28px;
+  background: #f1f3f4;
+  border-top: 1px solid #dadce0;
+  display: flex;
+  align-items: stretch;
+}
+.sheet-tabs-scroll {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+}
+.sheet-tabs-list {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  min-width: 0;
+  flex: 1;
+  scrollbar-width: thin;
+}
+.sheet-tab {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  font-size: 12px;
+  background: #e8eaed;
+  border: 1px solid #dadce0;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 2px;
+}
+.sheet-tab:hover { background: #dadce0; }
+.sheet-tab.active {
+  background: #fff;
+  border-bottom: 1px solid #fff;
+  margin-bottom: -1px;
+  font-weight: 500;
+}
+.sheet-tab-add {
+  flex-shrink: 0;
+  width: 28px;
+  height: 24px;
+  border: 1px solid #dadce0;
+  border-radius: 2px;
+  background: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  margin-left: 4px;
+}
+.sheet-tab-add:hover { background: #e8eaed; }
+
 /* --- OverlaySidebar: hidden by default, overlays sheet --- */
 .overlay-sidebar {
   position: fixed;
@@ -501,12 +587,11 @@ html, body {
 }
 
 /* --- Logged in / view state --- */
-body.gs-logged-in .menu-bar,
-body.gs-logged-in .app-toolbar,
+body.gs-logged-in .ribbon,
 body.gs-logged-in .sheet-canvas { display: flex; }
+body.gs-logged-in .ribbon { flex-direction: column; }
 body.gs-logged-in .app-header-right { display: flex; }
-body:not(.gs-logged-in) .menu-bar,
-body:not(.gs-logged-in) .app-toolbar { display: none; }
+body:not(.gs-logged-in) .ribbon { display: none; }
 body:not(.gs-logged-in) .app-header-right { display: none; }
 body:not(.gs-logged-in) .sheet-canvas { display: block; }
 
