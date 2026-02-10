@@ -73,9 +73,11 @@
   const umMessage = document.getElementById('um-message');
   const umTableBody = document.getElementById('um-table-body');
 
-  // Sidebar sheet list (quick access)
-  const sheetsListEl = document.getElementById('sheets-list');
-  const createSheetBtn = document.getElementById('create-sheet-btn');
+  const minimalBar = document.getElementById('minimal-bar');
+  const minimalUserName = document.getElementById('minimal-user-name');
+  const minimalLogoutBtn = document.getElementById('minimal-logout-btn');
+  const logoLink = document.getElementById('logo-link');
+  const logoLinkSheet = document.getElementById('logo-link-sheet');
 
   function setAuth(token, user) {
     authToken = token;
@@ -184,6 +186,7 @@
       document.body.classList.add('gs-logged-in');
       if (topUserNameEl) topUserNameEl.textContent = `${currentUser.username} (${currentUser.role})`;
       if (topUserAvatar) topUserAvatar.textContent = (currentUser.username || '').charAt(0).toUpperCase();
+      if (minimalUserName) minimalUserName.textContent = `${currentUser.username} (${currentUser.role})`;
       if (navUsers) {
         navUsers.style.display = (currentUser.role === 'admin' || currentUser.role === 'leader') ? '' : 'none';
       }
@@ -211,6 +214,7 @@
       document.body.classList.add('gs-logged-in');
       if (topUserNameEl) topUserNameEl.textContent = `${data.user.username} (${data.user.role})`;
       if (topUserAvatar) topUserAvatar.textContent = (data.user.username || '').charAt(0).toUpperCase();
+      if (minimalUserName) minimalUserName.textContent = `${data.user.username} (${data.user.role})`;
       if (navUsers) navUsers.style.display = (data.user.role === 'admin' || data.user.role === 'leader') ? '' : 'none';
       connectSocket();
       await loadHome();
@@ -221,7 +225,6 @@
   });
 
   async function loadHome() {
-    await loadSheetsList();
     if (!homeRecentList || !homeSharedList) return;
     // recent sheets
     try {
@@ -290,31 +293,6 @@
       li.textContent = 'Failed to load shared sheets.';
       homeSharedList.appendChild(li);
     }
-
-    await loadSheetsList();
-  }
-
-  async function loadSheetsList() {
-    try {
-      const data = await apiRequest('/sheets');
-      const sheets = data.sheets || [];
-      if (sheetsListEl) {
-        sheetsListEl.innerHTML = '';
-        sheets.forEach((s) => {
-          const li = document.createElement('li');
-          li.dataset.id = String(s.id);
-          li.textContent = s.name || 'Sheet';
-          const perm = document.createElement('span');
-          perm.className = 'sheet-permission';
-          perm.textContent = s.permission;
-          li.appendChild(perm);
-          li.addEventListener('click', () => openSheetView(s.id, s.permission));
-          sheetsListEl.appendChild(li);
-        });
-      }
-    } catch (err) {
-      console.error('Failed to load sheets', err);
-    }
   }
 
   function renderSheetTabs() {
@@ -371,24 +349,6 @@
     luckysheetInitialized = true;
   }
 
-  if (createSheetBtn) {
-    createSheetBtn.addEventListener('click', async () => {
-    try {
-      const name = prompt('Sheet name?', 'Sheet1');
-      const data = await apiRequest('/sheets', {
-        method: 'POST',
-        body: { name }
-      });
-      await loadHome();
-      if (data.sheet && data.sheet.id) {
-        openSheetView(data.sheet.id, 'owner');
-      }
-    } catch (err) {
-      alert(err.message);
-    }
-  });
-  }
-
   if (homeCreateSheetBtn) {
     homeCreateSheetBtn.addEventListener('click', async () => {
     try {
@@ -425,8 +385,7 @@
   });
   }
 
-  if (topLogoutBtn) {
-    topLogoutBtn.addEventListener('click', () => {
+  function doLogout() {
     if (socket) {
       socket.disconnect();
       socket = null;
@@ -437,10 +396,29 @@
     currentTabId = null;
     documentTabs = [];
     currentPermission = null;
-    topUserNameEl.textContent = '';
-    topSheetNameEl.textContent = '';
+    if (topUserNameEl) topUserNameEl.textContent = '';
+    if (topSheetNameEl) topSheetNameEl.textContent = '';
+    if (minimalUserName) minimalUserName.textContent = '';
     showView('login');
-  });
+  }
+  if (topLogoutBtn) topLogoutBtn.addEventListener('click', doLogout);
+  if (minimalLogoutBtn) minimalLogoutBtn.addEventListener('click', doLogout);
+
+  if (logoLink) {
+    logoLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeSidebar();
+      loadHome();
+      showView('home');
+    });
+  }
+  if (logoLinkSheet) {
+    logoLinkSheet.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeSidebar();
+      loadHome();
+      showView('home');
+    });
   }
 
   function closeSidebar() {
@@ -523,9 +501,7 @@
       if (action === 'new-sheet') {
         (async () => {
           try {
-            const name = prompt('Sheet name?', 'Sheet1');
-            const data = await apiRequest('/sheets', { method: 'POST', body: { name: name || 'Sheet1' } });
-            await loadSheetsList();
+            const data = await apiRequest('/sheets', { method: 'POST', body: { name: 'Sheet1' } });
             openSheetView(data.sheet.id, 'owner');
           } catch (err) { alert(err.message); }
         })();
@@ -549,10 +525,10 @@
     sheetTabAddBtn.addEventListener('click', async () => {
       if (!currentSheetId) return;
       try {
-        const name = prompt('Tab name?', 'Sheet' + (documentTabs.length + 1));
+        const defaultName = 'Sheet' + (documentTabs.length + 1);
         const tab = await apiRequest(`/sheets/${currentSheetId}/tabs`, {
           method: 'POST',
-          body: { name: name || ('Sheet' + (documentTabs.length + 1)) }
+          body: { name: defaultName }
         });
         documentTabs.push({
           id: tab.id,
@@ -765,12 +741,6 @@
   async function openSheetView(sheetId, permission) {
     currentSheetId = sheetId;
     currentPermission = permission;
-
-    if (sheetsListEl) {
-      Array.from(sheetsListEl.children).forEach((li) => {
-        li.classList.toggle('active', Number(li.dataset.id) === sheetId);
-      });
-    }
 
     const data = await apiRequest(`/sheets/${sheetId}`);
     const tabs = data.tabs || [];

@@ -62,7 +62,10 @@ html, body {
   font-size: 22px;
   color: #5f6368;
   font-weight: 400;
+  text-decoration: none;
 }
+.app-brand:hover { color: #202124; }
+.app-header .app-brand { color: #5f6368; }
 
 .app-sheet-name {
   display: inline-block;
@@ -109,6 +112,27 @@ html, body {
   font-weight: 500;
 }
 .app-user-name { font-size: 14px; color: #202124; }
+
+/* --- Minimal bar (when not in sheet: logo + user + logout) --- */
+.minimal-bar {
+  display: none;
+  height: 56px;
+  padding: 0 16px;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  background: #fff;
+  border-bottom: 1px solid #dadce0;
+}
+.minimal-bar .app-brand {
+  text-decoration: none;
+  color: #5f6368;
+}
+.minimal-bar .app-brand:hover { color: #202124; }
+.minimal-bar-right { display: flex; align-items: center; gap: 8px; }
+
+/* Sheet-only UI: header + ribbon only when viewing a sheet */
+.sheet-only-ui { display: none !important; }
 
 /* --- Ribbon (Excel-like) --- */
 .ribbon {
@@ -397,6 +421,7 @@ html, body {
   align-items: center;
   min-width: 0;
   flex: 1;
+  gap: 4px;
 }
 .sheet-tabs-list {
   display: flex;
@@ -432,17 +457,19 @@ html, body {
 }
 .sheet-tab-add {
   flex-shrink: 0;
-  width: 28px;
-  height: 24px;
+  min-width: 32px;
+  width: 32px;
+  height: 26px;
   border: 1px solid #dadce0;
-  border-radius: 2px;
+  border-radius: 4px;
   background: #fff;
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1;
   cursor: pointer;
-  margin-left: 4px;
+  font-weight: 300;
+  color: #5f6368;
 }
-.sheet-tab-add:hover { background: #e8eaed; }
+.sheet-tab-add:hover { background: #e8eaed; color: #202124; }
 
 /* --- OverlaySidebar: hidden by default, overlays sheet --- */
 .overlay-sidebar {
@@ -587,18 +614,16 @@ html, body {
 }
 
 /* --- Logged in / view state --- */
-body.gs-logged-in .ribbon,
 body.gs-logged-in .sheet-canvas { display: flex; }
-body.gs-logged-in .ribbon { flex-direction: column; }
-body.gs-logged-in .app-header-right { display: flex; }
-body:not(.gs-logged-in) .ribbon { display: none; }
-body:not(.gs-logged-in) .app-header-right { display: none; }
 body:not(.gs-logged-in) .sheet-canvas { display: block; }
 
-/* Header + ribbon only when a sheet (document) is open */
-body.gs-logged-in:not(.gs-view-sheet) .app-header-center,
-body.gs-logged-in:not(.gs-view-sheet) .app-btn-share { display: none !important; }
-body.gs-logged-in:not(.gs-view-sheet) .ribbon { display: none !important; }
+/* Minimal bar: only when logged in and NOT in sheet view */
+body.gs-logged-in:not(.gs-view-sheet) .minimal-bar { display: flex !important; }
+
+/* Header + ribbon: ONLY when in sheet view */
+body.gs-view-sheet .sheet-only-ui { display: flex !important; }
+body.gs-view-sheet .ribbon { flex-direction: column; }
+body.gs-view-sheet .minimal-bar { display: none !important; }
 
 body.gs-view-sheet .formula-bar { display: flex; }
 body:not(.gs-view-sheet) #view-sheet .formula-bar { display: none; }

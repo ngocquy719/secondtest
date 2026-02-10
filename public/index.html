@@ -11,10 +11,17 @@
   </head>
   <body>
     <div class="app-root">
-      <header class="app-header">
+      <header class="minimal-bar" id="minimal-bar">
+        <a href="#" class="app-brand" id="logo-link">Realtime Sheet</a>
+        <div class="minimal-bar-right">
+          <span id="minimal-user-name" class="app-user-name"></span>
+          <button type="button" id="minimal-logout-btn" class="app-btn-text">Logout</button>
+        </div>
+      </header>
+      <header class="app-header sheet-only-ui" id="app-header">
         <div class="app-header-left">
           <button type="button" id="sidebar-toggle" class="app-hamburger" title="Menu" aria-label="Menu">☰</button>
-          <span class="app-brand">Realtime Sheet</span>
+          <a href="#" class="app-brand" id="logo-link-sheet">Realtime Sheet</a>
         </div>
         <div class="app-header-center">
           <span id="top-sheet-name" class="app-sheet-name" contenteditable="true" title="Sheet name"></span>
@@ -27,7 +34,7 @@
         </div>
       </header>
 
-      <div class="ribbon">
+      <div class="ribbon sheet-only-ui" id="ribbon">
         <div class="ribbon-tabs" id="ribbon-tabs">
           <div class="ribbon-tab" data-tab="file">File</div>
           <div class="ribbon-tab active" data-tab="home">Home</div>
@@ -247,11 +254,6 @@
           <button type="button" class="sidebar-nav-item" data-view="users" id="nav-users" style="display:none"><span>User Management</span></button>
           <button type="button" class="sidebar-nav-item" data-view="settings" id="nav-settings"><span>Settings</span></button>
         </nav>
-        <div class="sidebar-section">
-          <div class="sidebar-section-title">Sheets</div>
-          <button type="button" id="create-sheet-btn" class="btn-new-sheet">New sheet</button>
-          <ul id="sheets-list" class="sidebar-sheets-list"></ul>
-        </div>
       </aside>
     </div>
 
