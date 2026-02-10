@@ -378,12 +378,7 @@
           return apiRequest(`/sheets/${currentSheetId}`).then((data) => {
           if (!window.SheetManager) return;
           SheetManager.setDocument(currentSheetId, data.tabs || [], data.permission);
-          if (window.SpreadsheetEngine) {
-            SpreadsheetEngine.loadFromTabs(SheetManager.getState().sheets);
-            createLuckysheetWithTabs(SpreadsheetEngine.toLuckysheetTabs());
-          } else {
-            createLuckysheetWithTabs(SheetManager.getState().sheets);
-          }
+          createLuckysheetWithTabs(SheetManager.getState().sheets);
           renderSheetTabs();
           setActiveSheetId(newTab.id);
             const order = SheetManager.getOrderById(newTab.id);
@@ -407,8 +402,7 @@
           if (window.SheetManager) SheetManager.removeSheet(tabId);
           const nextSheets = getSheets();
           if (nextSheets.length === 0) return;
-          if (window.SpreadsheetEngine) SpreadsheetEngine.removeTab(tabId);
-          createLuckysheetWithTabs(window.SpreadsheetEngine ? SpreadsheetEngine.toLuckysheetTabs() : nextSheets);
+          createLuckysheetWithTabs(nextSheets);
           renderSheetTabs();
           triggerLuckysheetSheetTabClick(0);
         })
@@ -430,8 +424,7 @@
           arr.splice(newIdx, 0, rem);
           arr.forEach((s, i) => { s.order = i; s.index = i; });
           if (window.SheetManager) SheetManager.setSheets(arr);
-          if (window.SpreadsheetEngine) SpreadsheetEngine.setTabs(getSheets());
-          createLuckysheetWithTabs(window.SpreadsheetEngine ? SpreadsheetEngine.toLuckysheetTabs() : getSheets());
+          createLuckysheetWithTabs(getSheets());
           renderSheetTabs();
           setActiveSheetId(tabId);
           triggerLuckysheetSheetTabClick(newIdx);
@@ -535,7 +528,6 @@
     currentSheetId = null;
     currentPermission = null;
     if (window.SheetManager) SheetManager.reset();
-    if (window.SpreadsheetEngine) SpreadsheetEngine.reset();
     if (topUserNameEl) topUserNameEl.textContent = '';
     if (gsDocTitleEl) gsDocTitleEl.textContent = '';
     if (minimalUserName) minimalUserName.textContent = '';
@@ -679,9 +671,32 @@
           config: {}
         };
         SheetManager.addSheet(minimalSheet);
-        if (window.SpreadsheetEngine) SpreadsheetEngine.setTabs(getSheets());
-        createLuckysheetWithTabs(window.SpreadsheetEngine ? SpreadsheetEngine.toLuckysheetTabs() : getSheets());
-        renderSheetTabs();
+        if (typeof luckysheet.insertSheet === 'function') {
+          const sheetConfig = {
+            name: minimalSheet.name,
+            index: String(minimalSheet.id),
+            order: minimalSheet.order,
+            status: 0,
+            row: minimalSheet.row || 100,
+            column: minimalSheet.column || 26,
+            celldata: [],
+            config: {}
+          };
+          try {
+            luckysheet.insertSheet(sheetConfig);
+            renderSheetTabs();
+            triggerLuckysheetSheetTabClick(minimalSheet.order);
+          } catch (e) {
+            console.warn('insertSheet failed, recreating workbook', e);
+            createLuckysheetWithTabs(getSheets());
+            renderSheetTabs();
+            triggerLuckysheetSheetTabClick(minimalSheet.order);
+          }
+        } else {
+          createLuckysheetWithTabs(getSheets());
+          renderSheetTabs();
+          triggerLuckysheetSheetTabClick(minimalSheet.order);
+        }
         triggerLuckysheetSheetTabClick(order);
       } catch (err) {
         console.error('Add sheet tab failed', err);
@@ -873,41 +888,14 @@
 
       isApplyingRemoteUpdate = true;
       try {
-        if (window.SpreadsheetEngine) {
-          const updates = SpreadsheetEngine.setCell(sheetTabId, row, column, value);
-          applyEngineUpdatesToLuckysheet(updates);
-          updates.forEach((u) => {
-            lastCellValues[`${u.tabId}:${u.r}:${u.c}`] = u.value;
-          });
-        } else {
-          if (sheetTabId !== getActiveSheetId()) {
-            isApplyingRemoteUpdate = false;
-            return;
-          }
-          luckysheet.setCellValue(row, column, value);
-          lastCellValues[`${row}:${column}`] = value;
+        const order = window.SheetManager ? SheetManager.getOrderById(sheetTabId) : 0;
+        if (order >= 0 && typeof luckysheet.setCellValue === 'function') {
+          luckysheet.setCellValue(row, column, value, { order });
         }
+        lastCellValues[`${sheetTabId}:${row}:${column}`] = value;
       } finally {
         isApplyingRemoteUpdate = false;
       }
-    });
-  }
-
-  function applyEngineUpdatesToLuckysheet(updates) {
-    if (!luckysheetInitialized || !updates || !updates.length) return;
-    if (typeof luckysheet.setSheetActive !== 'function' || typeof luckysheet.setCellValue !== 'function') return;
-    const currentOrder = window.SheetManager ? SheetManager.getOrderById(getActiveSheetId()) : 0;
-    const byTab = new Map();
-    updates.forEach((u) => {
-      const order = window.SheetManager ? SheetManager.getOrderById(u.tabId) : 0;
-      if (order < 0) return;
-      if (!byTab.has(order)) byTab.set(order, []);
-      byTab.get(order).push(u);
-    });
-    byTab.forEach((list, order) => {
-      if (Number(order) !== currentOrder) try { luckysheet.setSheetActive(Number(order)); } catch (_) {}
-      list.forEach((u) => { try { luckysheet.setCellValue(u.r, u.c, u.value); } catch (_) {} });
-      if (Number(order) !== currentOrder) try { luckysheet.setSheetActive(currentOrder); } catch (_) {}
     });
   }
 
@@ -985,11 +973,7 @@
       SheetManager.setDocument(sheetId, tabs, currentPermission);
       setActiveSheetId(tabs[0].id);
     }
-    if (window.SpreadsheetEngine) {
-      SpreadsheetEngine.setDocumentId(sheetId);
-      SpreadsheetEngine.loadFromTabs(getSheets());
-    }
-    createLuckysheetWithTabs(window.SpreadsheetEngine ? SpreadsheetEngine.toLuckysheetTabs() : getSheets());
+    createLuckysheetWithTabs(getSheets());
 
     if (socket && socket.connected) {
       socket.emit('join_sheet', { sheetId });
@@ -1009,44 +993,25 @@
     if (isApplyingRemoteUpdate) return;
     if (currentPermission === 'viewer') return;
 
-    let input = rawValue;
-    if (input != null && typeof input === 'object') {
-      input = input.v != null ? input.v : input.m;
+    let value = rawValue;
+    if (value != null && typeof value === 'object') {
+      value = value.v != null ? value.v : value.m;
     }
 
     const activeTabId = getActiveSheetId();
     if (!activeTabId) return;
 
-    if (window.SpreadsheetEngine) {
-      const updates = SpreadsheetEngine.setCell(activeTabId, r, c, input);
-      applyEngineUpdatesToLuckysheet(updates);
-      if (updates[0]) {
-        lastCellValues[`${activeTabId}:${r}:${c}`] = updates[0].value;
-        if (socket && socket.connected) {
-          socket.emit('cell_update', {
-            sheetId: currentSheetId,
-            sheetTabId: activeTabId,
-            row: r,
-            column: c,
-            value: input,
-            userId: currentUser?.id,
-            timestamp: new Date().toISOString()
-          });
-        }
-      }
-      return;
-    }
+    const key = `${activeTabId}:${r}:${c}`;
+    if (lastCellValues[key] === value) return;
+    lastCellValues[key] = value;
 
-    const key = `${r}:${c}`;
-    if (lastCellValues[key] === input) return;
-    lastCellValues[key] = input;
     if (socket && socket.connected) {
       socket.emit('cell_update', {
         sheetId: currentSheetId,
         sheetTabId: activeTabId,
         row: r,
         column: c,
-        value: input,
+        value: value,
         userId: currentUser?.id,
         timestamp: new Date().toISOString()
       });
@@ -1080,19 +1045,16 @@
     const sizeEl = byId('toolbar-size');
     if (sizeEl) sizeEl.addEventListener('change', function () { if (luckysheetInitialized) ToolbarCommands.executeCommand('fontSize', parseInt(this.value, 10) || 10); });
     byId('toolbar-sum')?.addEventListener('click', () => {
-      if (!luckysheetInitialized || !window.SpreadsheetEngine) return;
+      if (!luckysheetInitialized || typeof luckysheet.setCellValue !== 'function') return;
       const range = ToolbarCommands.getSelectionRange && ToolbarCommands.getSelectionRange();
-      const activeTabId = getActiveSheetId();
-      if (!range || !range.length || !activeTabId) return;
+      if (!range || !range.length) return;
       const r0 = range[0].row ? range[0].row[0] : 0;
       const r1 = range[0].row ? range[0].row[1] : 0;
       const c0 = range[0].column ? range[0].column[0] : 0;
       const c1 = range[0].column ? range[0].column[1] : 0;
-      const sheetName = window.SpreadsheetEngine.getTabNameById && SpreadsheetEngine.getTabNameById(activeTabId);
-      const rangeRef = (sheetName ? sheetName + '!' : '') + colIndexToLetters(c0) + (r0 + 1) + ':' + colIndexToLetters(c1) + (r1 + 1);
+      const rangeRef = colIndexToLetters(c0) + (r0 + 1) + ':' + colIndexToLetters(c1) + (r1 + 1);
       const formula = '=SUM(' + rangeRef + ')';
-      const updates = SpreadsheetEngine.setCell(activeTabId, r0, c0, formula);
-      applyEngineUpdatesToLuckysheet(updates);
+      luckysheet.setCellValue(r0, c0, formula);
     });
   }
 
