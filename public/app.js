@@ -605,16 +605,19 @@
       const action = item.dataset.action;
       menuDropdowns.querySelectorAll('.gs-menu-dropdown').forEach((d) => d.classList.remove('open'));
       if (action === 'new-sheet') {
-        (async () => {
-          try {
-            const data = await apiRequest('/sheets', { method: 'POST', body: { name: 'Untitled spreadsheet' } });
-            openSheetView(data.sheet.id, 'owner');
-          } catch (err) { alert(err.message); }
-        })();
+        if (!luckysheetInitialized || typeof luckysheet.addSheet !== 'function') return;
+        luckysheet.addSheet({ name: 'Untitled spreadsheet' });
+        return;
       }
       if (action === 'permissions' && headerShareBtn) headerShareBtn.click();
-      if (action === 'history') { /* version history placeholder */ }
-      if (action === 'export') { /* download placeholder */ }
+      if (action === 'history') {
+        if (typeof luckysheet.undo === 'function') luckysheet.undo();
+        return;
+      }
+      if (action === 'export') {
+        if (typeof luckysheet.redo === 'function') luckysheet.redo();
+        return;
+      }
     });
   }
 
