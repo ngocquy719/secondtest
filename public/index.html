@@ -11,6 +11,7 @@
   </head>
   <body>
     <div class="app-root">
+      <!-- Minimal bar: when logged in but NOT in sheet view (Home, My Sheets, etc.) -->
       <header class="minimal-bar" id="minimal-bar">
         <a href="#" class="app-brand" id="logo-link">Realtime Sheet</a>
         <div class="minimal-bar-right">
@@ -18,135 +19,103 @@
           <button type="button" id="minimal-logout-btn" class="app-btn-text">Logout</button>
         </div>
       </header>
-      <header class="app-header sheet-only-ui" id="app-header">
-        <div class="app-header-left">
-          <button type="button" id="sidebar-toggle" class="app-hamburger" title="Menu" aria-label="Menu">☰</button>
-          <a href="#" class="app-brand" id="logo-link-sheet">Realtime Sheet</a>
-        </div>
-        <div class="app-header-center">
-          <span id="top-sheet-name" class="app-sheet-name" contenteditable="true" title="Sheet name"></span>
-        </div>
-        <div class="app-header-right" id="top-user-wrap">
-          <button type="button" class="app-btn-share" id="header-share-btn">Share</button>
-          <div class="app-user-avatar" id="top-user-avatar"></div>
-          <span id="top-user-name" class="app-user-name"></span>
-          <button type="button" id="top-logout-btn" class="app-btn-text">Logout</button>
-        </div>
-      </header>
 
-      <div class="ribbon sheet-only-ui" id="ribbon">
-        <div class="ribbon-tabs" id="ribbon-tabs">
-          <div class="ribbon-tab" data-tab="file">File</div>
-          <div class="ribbon-tab active" data-tab="home">Home</div>
-          <div class="ribbon-tab" data-tab="insert">Insert</div>
-          <div class="ribbon-tab" data-tab="page-layout">Page Layout</div>
-          <div class="ribbon-tab" data-tab="formulas">Formulas</div>
-          <div class="ribbon-tab" data-tab="data">Data</div>
-          <div class="ribbon-tab" data-tab="review">Review</div>
-          <div class="ribbon-tab" data-tab="view">View</div>
-        </div>
-        <div class="ribbon-content">
-          <div class="ribbon-panel" id="ribbon-file" style="display:none"></div>
-          <div class="ribbon-panel active" id="ribbon-home">
-            <div class="ribbon-group">
-              <span class="ribbon-group-label">Clipboard</span>
-              <div class="ribbon-group-btns">
-                <button type="button" class="ribbon-btn" title="Paste">Paste</button>
-                <button type="button" class="ribbon-btn" title="Cut">Cut</button>
-                <button type="button" class="ribbon-btn" title="Copy">Copy</button>
-              </div>
-            </div>
-            <div class="ribbon-group">
-              <span class="ribbon-group-label">Font</span>
-              <div class="ribbon-group-btns">
-                <select class="ribbon-select" id="toolbar-font"><option>Arial</option></select>
-                <select class="ribbon-select ribbon-select-narrow" id="toolbar-size"><option>10</option><option>11</option><option>12</option></select>
-                <button type="button" class="ribbon-btn" id="toolbar-bold" title="Bold"><b>B</b></button>
-                <button type="button" class="ribbon-btn" id="toolbar-italic" title="Italic"><i>I</i></button>
-                <button type="button" class="ribbon-btn" id="toolbar-underline" title="Underline"><u>U</u></button>
-                <button type="button" class="ribbon-btn" id="toolbar-text-color" title="Text color">A</button>
-                <button type="button" class="ribbon-btn" id="toolbar-fill" title="Fill color">▤</button>
-              </div>
-            </div>
-            <div class="ribbon-group">
-              <span class="ribbon-group-label">Alignment</span>
-              <div class="ribbon-group-btns">
-                <button type="button" class="ribbon-btn" id="toolbar-align-left" title="Align left">≡</button>
-                <button type="button" class="ribbon-btn" id="toolbar-align-center" title="Align center">≡</button>
-                <button type="button" class="ribbon-btn" id="toolbar-align-right" title="Align right">≡</button>
-                <button type="button" class="ribbon-btn" id="toolbar-filter" title="Filter">⊞</button>
-                <button type="button" class="ribbon-btn" id="toolbar-sum" title="Sum">Σ</button>
-              </div>
-            </div>
+      <!-- Sheet view: Google Sheets-style layout -->
+      <div class="gs-sheet-ui sheet-only-ui" id="gs-sheet-ui">
+        <!-- Top bar: icon, doc title, star, folder, saved status | clock, comment, Share, avatar -->
+        <header class="gs-top-bar">
+          <div class="gs-top-bar-left">
+            <button type="button" id="sidebar-toggle" class="gs-icon-btn" title="Menu" aria-label="Menu">☰</button>
+            <a href="#" class="gs-app-icon" id="logo-link-sheet" title="Home">📊</a>
+            <span id="gs-doc-title" class="gs-doc-title" contenteditable="true" title="Document name"></span>
+            <button type="button" class="gs-icon-btn" id="gs-star-btn" title="Star">★</button>
+            <button type="button" class="gs-icon-btn" id="gs-folder-btn" title="Move to folder">📁</button>
+            <span id="gs-save-status" class="gs-save-status">Saved</span>
           </div>
-          <div class="ribbon-panel" id="ribbon-insert">
-            <div class="ribbon-group">
-              <span class="ribbon-group-label">Rows & Columns</span>
-              <div class="ribbon-group-btns">
-                <button type="button" class="ribbon-btn" data-action="insert-row-above">Row above</button>
-                <button type="button" class="ribbon-btn" data-action="insert-row-below">Row below</button>
-                <button type="button" class="ribbon-btn" data-action="insert-column-left">Column left</button>
-                <button type="button" class="ribbon-btn" data-action="insert-column-right">Column right</button>
-              </div>
-            </div>
+          <div class="gs-top-bar-right">
+            <button type="button" class="gs-icon-btn" id="gs-history-btn" title="Version history">🕐</button>
+            <button type="button" class="gs-icon-btn" id="gs-comment-btn" title="Comments">💬</button>
+            <button type="button" class="gs-btn-share" id="header-share-btn">Share</button>
+            <div class="gs-user-avatar" id="top-user-avatar"></div>
+            <span id="top-user-name" class="app-user-name"></span>
+            <button type="button" id="top-logout-btn" class="app-btn-text">Logout</button>
           </div>
-          <div class="ribbon-panel" id="ribbon-page-layout">
-            <div class="ribbon-group">
-              <span class="ribbon-group-label">Sheet Options</span>
-              <div class="ribbon-group-btns">
-                <button type="button" class="ribbon-btn" data-action="column-width">Column width</button>
-                <button type="button" class="ribbon-btn" data-action="column-visibility">Column visibility</button>
-              </div>
+        </header>
+
+        <!-- Menu bar: File, Edit, View, Insert, Format, Data, Tools, Extensions, Help -->
+        <nav class="gs-menu-bar">
+          <button type="button" class="gs-menu-item" data-menu="file">File</button>
+          <button type="button" class="gs-menu-item" data-menu="edit">Edit</button>
+          <button type="button" class="gs-menu-item" data-menu="view">View</button>
+          <button type="button" class="gs-menu-item" data-menu="insert">Insert</button>
+          <button type="button" class="gs-menu-item" data-menu="format">Format</button>
+          <button type="button" class="gs-menu-item" data-menu="data">Data</button>
+          <button type="button" class="gs-menu-item" data-menu="tools">Tools</button>
+          <button type="button" class="gs-menu-item" data-menu="extensions">Extensions</button>
+          <button type="button" class="gs-menu-item" data-menu="help">Help</button>
+        </nav>
+
+        <!-- Toolbar / Ribbon -->
+        <div class="gs-ribbon">
+          <div class="gs-ribbon-row">
+            <div class="gs-ribbon-group">
+              <button type="button" class="gs-ribbon-btn" title="Menus">Menus</button>
+              <button type="button" class="gs-ribbon-btn" title="Undo">↶</button>
+              <button type="button" class="gs-ribbon-btn" title="Redo">↷</button>
+              <button type="button" class="gs-ribbon-btn" title="Print">🖨</button>
+              <button type="button" class="gs-ribbon-btn" title="Format painter">🖌</button>
+              <select class="gs-ribbon-select gs-zoom-select" id="toolbar-zoom" title="Zoom"><option>50%</option><option>75%</option><option selected>100%</option><option>125%</option><option>150%</option></select>
             </div>
-          </div>
-          <div class="ribbon-panel" id="ribbon-formulas">
-            <div class="ribbon-group">
-              <span class="ribbon-group-label">Function</span>
-              <div class="ribbon-group-btns">
-                <button type="button" class="ribbon-btn toolbar-sum" title="Sum">Σ Sum</button>
-              </div>
+            <div class="gs-ribbon-group">
+              <select class="gs-ribbon-select" id="toolbar-number-format" title="Number format"><option>123</option><option>Currency</option><option>Percent</option><option>Date</option></select>
+              <button type="button" class="gs-ribbon-btn" title="Currency">$</button>
+              <button type="button" class="gs-ribbon-btn" title="Percent">%</button>
+              <button type="button" class="gs-ribbon-btn" title="Decrease decimals">.0←</button>
+              <button type="button" class="gs-ribbon-btn" title="Increase decimals">.0→</button>
             </div>
-          </div>
-          <div class="ribbon-panel" id="ribbon-data">
-            <div class="ribbon-group">
-              <span class="ribbon-group-label">Sort & Filter</span>
-              <div class="ribbon-group-btns">
-                <button type="button" class="ribbon-btn" data-action="placeholder">Sort A to Z</button>
-                <button type="button" class="ribbon-btn" data-action="placeholder">Filter</button>
-              </div>
+            <div class="gs-ribbon-group">
+              <select class="gs-ribbon-select" id="toolbar-font" title="Font"><option>Arial</option><option>Roboto</option></select>
+              <select class="gs-ribbon-select gs-font-size" id="toolbar-size" title="Font size"><option>8</option><option>9</option><option selected>10</option><option>11</option><option>12</option><option>14</option></select>
+              <button type="button" class="gs-ribbon-btn" id="toolbar-bold" title="Bold"><b>B</b></button>
+              <button type="button" class="gs-ribbon-btn" id="toolbar-italic" title="Italic"><i>I</i></button>
+              <button type="button" class="gs-ribbon-btn" id="toolbar-underline" title="Underline"><u>U</u></button>
+              <button type="button" class="gs-ribbon-btn" id="toolbar-strike" title="Strikethrough">S̶</button>
+              <button type="button" class="gs-ribbon-btn" id="toolbar-text-color" title="Text color">A</button>
+              <button type="button" class="gs-ribbon-btn" id="toolbar-fill" title="Fill color">▤</button>
+              <button type="button" class="gs-ribbon-btn" id="toolbar-borders" title="Borders">⊞</button>
+              <button type="button" class="gs-ribbon-btn" id="toolbar-merge" title="Merge cells">Merge</button>
             </div>
-          </div>
-          <div class="ribbon-panel" id="ribbon-review">
-            <div class="ribbon-group">
-              <span class="ribbon-group-label">Share</span>
-              <div class="ribbon-group-btns">
-                <button type="button" class="ribbon-btn" data-action="permissions">Permissions</button>
-                <button type="button" class="ribbon-btn" data-action="history">Version history</button>
-              </div>
+            <div class="gs-ribbon-group">
+              <button type="button" class="gs-ribbon-btn" id="toolbar-align-left" title="Align left">≡</button>
+              <button type="button" class="gs-ribbon-btn" id="toolbar-align-center" title="Align center">≡</button>
+              <button type="button" class="gs-ribbon-btn" id="toolbar-align-right" title="Align right">≡</button>
+              <button type="button" class="gs-ribbon-btn" id="toolbar-valign" title="Vertical align">⊟</button>
+              <button type="button" class="gs-ribbon-btn" id="toolbar-wrap" title="Wrap text">↵</button>
+              <button type="button" class="gs-ribbon-btn" id="toolbar-rotate" title="Rotate">↻</button>
             </div>
-          </div>
-          <div class="ribbon-panel" id="ribbon-view">
-            <div class="ribbon-group">
-              <span class="ribbon-group-label">View</span>
-              <div class="ribbon-group-btns">
-                <button type="button" class="ribbon-btn" data-action="placeholder">Full screen</button>
-                <button type="button" class="ribbon-btn" data-action="placeholder">Freeze</button>
-              </div>
+            <div class="gs-ribbon-group">
+              <button type="button" class="gs-ribbon-btn" title="Insert link">🔗</button>
+              <button type="button" class="gs-ribbon-btn" title="Insert comment">💬</button>
+              <button type="button" class="gs-ribbon-btn" title="Insert chart">📊</button>
+              <button type="button" class="gs-ribbon-btn" id="toolbar-filter" title="Create filter">Filter</button>
+              <button type="button" class="gs-ribbon-btn" id="toolbar-sum" title="Functions">Σ</button>
             </div>
           </div>
         </div>
-      </div>
-      <div class="menu-dropdowns" id="gs-menu-dropdowns">
-        <div class="menu-dropdown" id="dropdown-file">
-          <div class="menu-dropdown-item" data-action="new-sheet">New</div>
-          <div class="menu-dropdown-item" data-action="placeholder">Open</div>
-          <div class="menu-dropdown-item" data-action="placeholder">Make a copy</div>
-          <div class="menu-dropdown-divider"></div>
-          <div class="menu-dropdown-item" data-action="permissions">Permissions</div>
-          <div class="menu-dropdown-item" data-action="history">Version history</div>
-          <div class="menu-dropdown-item" data-action="export">Download</div>
-          <div class="menu-dropdown-divider"></div>
-          <div class="menu-dropdown-item" data-action="placeholder">Print</div>
+
+        <!-- File menu dropdown -->
+        <div class="gs-menu-dropdowns" id="gs-menu-dropdowns">
+          <div class="gs-menu-dropdown" id="dropdown-file">
+            <div class="gs-menu-dropdown-item" data-action="new-sheet">New</div>
+            <div class="gs-menu-dropdown-item" data-action="placeholder">Open</div>
+            <div class="gs-menu-dropdown-item" data-action="placeholder">Make a copy</div>
+            <div class="gs-menu-dropdown-divider"></div>
+            <div class="gs-menu-dropdown-item" data-action="permissions">Share</div>
+            <div class="gs-menu-dropdown-item" data-action="history">Version history</div>
+            <div class="gs-menu-dropdown-item" data-action="export">Download</div>
+            <div class="gs-menu-dropdown-divider"></div>
+            <div class="gs-menu-dropdown-item" data-action="placeholder">Print</div>
+          </div>
         </div>
       </div>
 
@@ -167,7 +136,7 @@
         <section id="view-home" class="canvas-view hidden">
           <div class="canvas-inner">
             <h1 class="canvas-title">Home</h1>
-            <button type="button" id="home-create-sheet-btn" class="btn-primary">Create new sheet</button>
+            <button type="button" id="home-create-sheet-btn" class="btn-primary">Create new spreadsheet</button>
             <div class="home-section">
               <h2>Recent</h2>
               <ul id="home-recent-sheets" class="sheet-list"></ul>
@@ -182,7 +151,7 @@
         <section id="view-my-sheets" class="canvas-view hidden">
           <div class="canvas-inner">
             <h1 class="canvas-title">My Sheets</h1>
-            <button type="button" id="my-create-sheet-btn" class="btn-primary">Create new sheet</button>
+            <button type="button" id="my-create-sheet-btn" class="btn-primary">Create new spreadsheet</button>
             <table class="data-table">
               <thead><tr><th>Name</th><th>Updated</th><th>Permission</th><th></th></tr></thead>
               <tbody id="my-sheets-table-body"></tbody>
@@ -225,19 +194,20 @@
         </section>
 
         <section id="view-sheet" class="canvas-view hidden">
-          <div class="formula-bar">
-            <span class="formula-fx">fx</span>
-            <input type="text" class="formula-input" id="formula-input" placeholder="Enter formula or value" readonly />
-            <span id="current-cell-ref" class="cell-ref">A1</span>
-            <span id="current-cell-meta" class="cell-meta"></span>
+          <div class="gs-formula-bar">
+            <span id="current-cell-ref" class="gs-cell-ref">A1</span>
+            <span class="gs-formula-fx">fx</span>
+            <input type="text" class="gs-formula-input" id="formula-input" placeholder="Enter formula or value" readonly />
           </div>
           <div class="grid-container">
             <div id="luckysheet" class="luckysheet-wrap"></div>
           </div>
-          <div class="sheet-tabs-bar">
-            <div class="sheet-tabs-scroll" id="sheet-tabs-scroll">
-              <div class="sheet-tabs-list" id="sheet-tabs-list"></div>
-              <button type="button" class="sheet-tab-add" id="sheet-tab-add" title="New sheet">+</button>
+          <!-- Bottom: ONE row = sheet tabs (worksheets in THIS file). + = add sheet tab, NOT new file -->
+          <div class="gs-sheet-tabs-bar">
+            <button type="button" class="gs-sheet-tab-add" id="sheet-tab-add" title="Add sheet (add worksheet in this spreadsheet)">+</button>
+            <button type="button" class="gs-sheet-tabs-list-btn" id="sheet-tabs-list-btn" title="List all sheets">≡</button>
+            <div class="gs-sheet-tabs-scroll">
+              <div class="gs-sheet-tabs-list" id="sheet-tabs-list"></div>
             </div>
           </div>
         </section>
@@ -255,6 +225,27 @@
           <button type="button" class="sidebar-nav-item" data-view="settings" id="nav-settings"><span>Settings</span></button>
         </nav>
       </aside>
+    </div>
+
+    <!-- Sheet tab context menu (rename, duplicate, delete, move) -->
+    <div id="sheet-tab-context-menu" class="gs-context-menu hidden">
+      <div class="gs-context-item" data-tab-action="rename">Rename</div>
+      <div class="gs-context-item" data-tab-action="duplicate">Duplicate</div>
+      <div class="gs-context-item" data-tab-action="delete">Delete</div>
+      <div class="gs-context-item" data-tab-action="move-left">Move left</div>
+      <div class="gs-context-item" data-tab-action="move-right">Move right</div>
+    </div>
+
+    <!-- List all sheets (tabs) in this document -->
+    <div id="sheet-tabs-list-modal" class="modal hidden">
+      <div class="modal-backdrop" id="sheet-tabs-list-backdrop"></div>
+      <div class="modal-dialog gs-tabs-list-dialog">
+        <h3>Sheets in this spreadsheet</h3>
+        <ul id="sheet-tabs-list-modal-ul"></ul>
+        <div class="modal-actions">
+          <button type="button" class="app-btn-text" id="sheet-tabs-list-close">Close</button>
+        </div>
+      </div>
     </div>
 
     <div id="share-modal" class="modal hidden">

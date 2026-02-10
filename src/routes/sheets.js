@@ -7,7 +7,8 @@ if (!db || typeof db.get !== 'function' || typeof db.all !== 'function' || typeo
 
 const router = express.Router();
 
-function buildLuckysheetData(tabId, tabName, cellRows) {
+// Build one sheet for Luckysheet multi-sheet workbook. index = unique id, order = display order (0-based), status = 1 active / 0 inactive.
+function buildLuckysheetData(tabId, tabName, orderIndex, isActive, cellRows) {
   const celldata = (cellRows || []).map((c) => ({
     r: c.row,
     c: c.column,
@@ -16,10 +17,13 @@ function buildLuckysheetData(tabId, tabName, cellRows) {
   return {
     id: tabId,
     name: tabName || 'Sheet1',
-    index: 0,
+    index: tabId,
+    order: orderIndex,
+    status: isActive ? 1 : 0,
     row: 100,
     column: 26,
-    celldata
+    celldata,
+    config: {}
   };
 }
 
@@ -138,8 +142,7 @@ router.get('/:id', (req, res) => {
                   pending = -1;
                   return;
                 }
-                tabData[idx] = buildLuckysheetData(tab.id, tab.name, cellRows || []);
-                tabData[idx].index = idx;
+                tabData[idx] = buildLuckysheetData(tab.id, tab.name, tab.order_index ?? idx, idx === 0, cellRows || []);
                 pending--;
                 if (pending === 0) {
                   res.json({
@@ -216,6 +219,162 @@ router.patch('/:id/tabs/:tabId', (req, res) => {
           if (err2) return res.status(500).json({ error: 'Internal server error' });
           if (this.changes === 0) return res.status(404).json({ error: 'Tab not found' });
           res.json({ ok: true });
+        }
+      );
+    }
+  );
+});
+
+// Delete a tab (sheet_tab in this document). Must keep at least one tab.
+router.delete('/:id/tabs/:tabId', (req, res) => {
+  const current = req.user;
+  const sheetId = Number(req.params.id);
+  const tabId = Number(req.params.tabId);
+  if (Number.isNaN(sheetId) || Number.isNaN(tabId)) {
+    return res.status(400).json({ error: 'Invalid request' });
+  }
+  db.get(
+    `SELECT sp.role FROM sheet_permissions sp WHERE sp.sheet_id = ? AND sp.user_id = ?`,
+    [sheetId, current.id],
+    (err, perm) => {
+      if (err) return res.status(500).json({ error: 'Internal server error' });
+      if (!perm || (perm.role !== 'owner' && perm.role !== 'editor')) {
+        return res.status(403).json({ error: 'No permission to delete tab' });
+      }
+      db.get(
+        `SELECT COUNT(*) AS cnt FROM sheet_tabs WHERE sheet_id = ?`,
+        [sheetId],
+        (err2, row) => {
+          if (err2) return res.status(500).json({ error: 'Internal server error' });
+          if (row && row.cnt <= 1) {
+            return res.status(400).json({ error: 'Cannot delete the only sheet tab' });
+          }
+          db.run('DELETE FROM cells WHERE sheet_id = ? AND sheet_tab_id = ?', [sheetId, tabId], (err3) => {
+            if (err3) return res.status(500).json({ error: 'Internal server error' });
+            db.run(
+              'DELETE FROM sheet_tabs WHERE id = ? AND sheet_id = ?',
+              [tabId, sheetId],
+              function (err4) {
+                if (err4) return res.status(500).json({ error: 'Internal server error' });
+                if (this.changes === 0) return res.status(404).json({ error: 'Tab not found' });
+                res.json({ ok: true });
+              }
+            );
+          });
+        }
+      );
+    }
+  );
+});
+
+// Duplicate a tab (new sheet_tab in this document with copied cells)
+router.post('/:id/tabs/:tabId/duplicate', (req, res) => {
+  const current = req.user;
+  const sheetId = Number(req.params.id);
+  const tabId = Number(req.params.tabId);
+  if (Number.isNaN(sheetId) || Number.isNaN(tabId)) {
+    return res.status(400).json({ error: 'Invalid request' });
+  }
+  db.get(
+    `SELECT sp.role FROM sheet_permissions sp WHERE sp.sheet_id = ? AND sp.user_id = ?`,
+    [sheetId, current.id],
+    (err, perm) => {
+      if (err) return res.status(500).json({ error: 'Internal server error' });
+      if (!perm || (perm.role !== 'owner' && perm.role !== 'editor')) {
+        return res.status(403).json({ error: 'No permission' });
+      }
+      db.get(
+        `SELECT id, name FROM sheet_tabs WHERE id = ? AND sheet_id = ?`,
+        [tabId, sheetId],
+        (err2, tab) => {
+          if (err2) return res.status(500).json({ error: 'Internal server error' });
+          if (!tab) return res.status(404).json({ error: 'Tab not found' });
+          db.get(
+            `SELECT COALESCE(MAX(order_index), -1) + 1 AS next FROM sheet_tabs WHERE sheet_id = ?`,
+            [sheetId],
+            (e, r) => {
+              if (e) return res.status(500).json({ error: 'Internal server error' });
+              const orderIndex = r ? r.next : 0;
+              const newName = (tab.name || 'Sheet') + ' Copy';
+              db.run(
+                `INSERT INTO sheet_tabs (sheet_id, name, order_index) VALUES (?, ?, ?)`,
+                [sheetId, newName, orderIndex],
+                function (err3) {
+                  if (err3) return res.status(500).json({ error: 'Internal server error' });
+                  const newTabId = this.lastID;
+                  db.all(
+                    `SELECT row, column, value FROM cells WHERE sheet_id = ? AND sheet_tab_id = ?`,
+                    [sheetId, tabId],
+                    (err4, cells) => {
+                      if (err4) return res.status(500).json({ error: 'Internal server error' });
+                      const now = new Date().toISOString();
+                      let pending = (cells || []).length;
+                      if (pending === 0) {
+                        return res.json({ id: newTabId, name: newName, order_index: orderIndex });
+                      }
+                      (cells || []).forEach((c) => {
+                        db.run(
+                          `INSERT INTO cells (sheet_id, sheet_tab_id, row, column, value, updated_at, updated_by)
+                           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                          [sheetId, newTabId, c.row, c.column, c.value, now, current.id],
+                          (err5) => {
+                            if (err5) console.error('cell copy error', err5);
+                            pending--;
+                            if (pending === 0) {
+                              res.json({ id: newTabId, name: newName, order_index: orderIndex });
+                            }
+                          }
+                        );
+                      });
+                    }
+                  );
+                }
+              );
+            }
+          );
+        }
+      );
+    }
+  );
+});
+
+// Move tab order (body: { order_index: number } = new 0-based position)
+router.post('/:id/tabs/:tabId/move', (req, res) => {
+  const current = req.user;
+  const sheetId = Number(req.params.id);
+  const tabId = Number(req.params.tabId);
+  const newIdx = Number(req.body.order_index);
+  if (Number.isNaN(sheetId) || Number.isNaN(tabId) || Number.isNaN(newIdx) || newIdx < 0) {
+    return res.status(400).json({ error: 'Invalid request' });
+  }
+  db.get(
+    `SELECT sp.role FROM sheet_permissions sp WHERE sp.sheet_id = ? AND sp.user_id = ?`,
+    [sheetId, current.id],
+    (err, perm) => {
+      if (err) return res.status(500).json({ error: 'Internal server error' });
+      if (!perm || (perm.role !== 'owner' && perm.role !== 'editor')) {
+        return res.status(403).json({ error: 'No permission' });
+      }
+      db.all(
+        `SELECT id, order_index FROM sheet_tabs WHERE sheet_id = ? ORDER BY order_index, id`,
+        [sheetId],
+        (err2, rows) => {
+          if (err2) return res.status(500).json({ error: 'Internal server error' });
+          const tabs = rows || [];
+          const fromIdx = tabs.findIndex((t) => t.id === tabId);
+          if (fromIdx < 0) return res.status(404).json({ error: 'Tab not found' });
+          if (fromIdx === newIdx) return res.json({ ok: true });
+          const [rem] = tabs.splice(fromIdx, 1);
+          tabs.splice(newIdx, 0, rem);
+          let pending = tabs.length;
+          const done = (e) => {
+            if (e) console.error('move tab update error', e);
+            pending--;
+            if (pending === 0) res.json({ ok: true });
+          };
+          tabs.forEach((t, i) => {
+            db.run(`UPDATE sheet_tabs SET order_index = ? WHERE id = ? AND sheet_id = ?`, [i, t.id, sheetId], done);
+          });
         }
       );
     }

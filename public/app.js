@@ -14,7 +14,8 @@
 
   const topUserNameEl = document.getElementById('top-user-name');
   const topLogoutBtn = document.getElementById('top-logout-btn');
-  const topSheetNameEl = document.getElementById('top-sheet-name');
+  const gsDocTitleEl = document.getElementById('gs-doc-title');
+  const gsSaveStatusEl = document.getElementById('gs-save-status');
   const topUserAvatar = document.getElementById('top-user-avatar');
   const headerShareBtn = document.getElementById('header-share-btn');
   const shareModal = document.getElementById('share-modal');
@@ -24,9 +25,13 @@
   const shareMessage = document.getElementById('share-message');
   const shareCancelBtn = document.getElementById('share-cancel');
   const menuDropdowns = document.getElementById('gs-menu-dropdowns');
-  const ribbonTabs = document.getElementById('ribbon-tabs');
   const sheetTabsList = document.getElementById('sheet-tabs-list');
   const sheetTabAddBtn = document.getElementById('sheet-tab-add');
+  const sheetTabsListBtn = document.getElementById('sheet-tabs-list-btn');
+  const sheetTabContextMenu = document.getElementById('sheet-tab-context-menu');
+  const sheetTabsListModal = document.getElementById('sheet-tabs-list-modal');
+  const sheetTabsListModalUl = document.getElementById('sheet-tabs-list-modal-ul');
+  const currentCellRefEl = document.getElementById('current-cell-ref');
 
   const sidebarOverlay = document.getElementById('sidebar-overlay');
   const sidebarBackdrop = document.getElementById('sidebar-backdrop');
@@ -140,7 +145,7 @@
         document.body.classList.remove('gs-logged-in');
         if (viewLogin) viewLogin.classList.remove('hidden');
         if (topUserNameEl) topUserNameEl.textContent = '';
-        if (topSheetNameEl) topSheetNameEl.textContent = '';
+        if (gsDocTitleEl) gsDocTitleEl.textContent = '';
         if (topUserAvatar) topUserAvatar.textContent = '';
         break;
       case 'home':
@@ -299,55 +304,170 @@
     if (!sheetTabsList) return;
     sheetTabsList.innerHTML = '';
     documentTabs.forEach((tab) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'sheet-tab' + (tab.id === currentTabId ? ' active' : '');
-      btn.dataset.tabId = String(tab.id);
-      btn.textContent = tab.name || 'Sheet';
-      btn.title = tab.name || 'Sheet';
-      btn.addEventListener('click', () => switchToTab(tab.id));
-      btn.addEventListener('dblclick', (e) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'gs-sheet-tab' + (tab.id === currentTabId ? ' active' : '');
+      wrap.dataset.tabId = String(tab.id);
+      wrap.title = tab.name || 'Sheet';
+      const label = document.createElement('span');
+      label.textContent = tab.name || 'Sheet';
+      label.style.flex = '1';
+      label.style.overflow = 'hidden';
+      label.style.textOverflow = 'ellipsis';
+      const arrow = document.createElement('span');
+      arrow.className = 'gs-sheet-tab-arrow';
+      arrow.textContent = '▼';
+      arrow.setAttribute('aria-label', 'Tab menu');
+      wrap.appendChild(label);
+      wrap.appendChild(arrow);
+
+      const openContextMenu = (e) => {
         e.preventDefault();
-        const newName = prompt('Rename tab', tab.name || 'Sheet');
-        if (newName == null || newName.trim() === '') return;
-        apiRequest(`/sheets/${currentSheetId}/tabs/${tab.id}`, { method: 'PATCH', body: { name: newName.trim() } })
-          .then(() => {
-            tab.name = newName.trim();
-            btn.textContent = tab.name;
-            btn.title = tab.name;
-          })
-          .catch((err) => alert(err.message));
+        e.stopPropagation();
+        sheetTabContextMenu.dataset.tabId = String(tab.id);
+        sheetTabContextMenu.classList.remove('hidden');
+        sheetTabContextMenu.style.left = e.clientX + 'px';
+        sheetTabContextMenu.style.top = e.clientY + 'px';
+      };
+
+      label.addEventListener('click', (e) => {
+        e.stopPropagation();
+        switchToTab(tab.id);
       });
-      sheetTabsList.appendChild(btn);
+      arrow.addEventListener('click', openContextMenu);
+      wrap.addEventListener('contextmenu', openContextMenu);
+
+      sheetTabsList.appendChild(wrap);
     });
+  }
+
+  function closeTabContextMenu() {
+    if (sheetTabContextMenu) {
+      sheetTabContextMenu.classList.add('hidden');
+      sheetTabContextMenu.dataset.tabId = '';
+    }
+  }
+
+  function handleTabContextAction(action) {
+    const tabId = Number(sheetTabContextMenu.dataset.tabId);
+    if (!tabId) return;
+    closeTabContextMenu();
+    const tab = documentTabs.find((t) => t.id === tabId);
+    if (!tab) return;
+    if (action === 'rename') {
+      const newName = prompt('Rename sheet', tab.name || 'Sheet');
+      if (newName == null || newName.trim() === '') return;
+      apiRequest(`/sheets/${currentSheetId}/tabs/${tabId}`, { method: 'PATCH', body: { name: newName.trim() } })
+        .then(() => {
+          tab.name = newName.trim();
+          renderSheetTabs();
+        })
+        .catch((err) => alert(err.message));
+      return;
+    }
+    if (action === 'duplicate') {
+      apiRequest(`/sheets/${currentSheetId}/tabs/${tabId}/duplicate`, { method: 'POST' })
+        .then((newTab) => {
+          return apiRequest(`/sheets/${currentSheetId}`).then((data) => {
+            documentTabs = data.tabs || [];
+            createLuckysheetWithTabs(documentTabs);
+            currentTabId = newTab.id;
+            renderSheetTabs();
+            const order = documentTabs.findIndex((t) => t.id === newTab.id);
+            if (order >= 0 && typeof luckysheet.setSheetActive === 'function') {
+              try { luckysheet.setSheetActive(order); } catch (_) {}
+            }
+          });
+        })
+        .catch((err) => alert(err.message));
+      return;
+    }
+    if (action === 'delete') {
+      if (documentTabs.length <= 1) {
+        alert('Cannot delete the only sheet. Add another sheet first.');
+        return;
+      }
+      if (!confirm('Delete sheet "' + (tab.name || 'Sheet') + '"?')) return;
+      apiRequest(`/sheets/${currentSheetId}/tabs/${tabId}`, { method: 'DELETE' })
+        .then(() => apiRequest(`/sheets/${currentSheetId}`))
+        .then((data) => {
+          documentTabs = data.tabs || [];
+          if (documentTabs.length === 0) return;
+          currentTabId = documentTabs[0].id;
+          createLuckysheetWithTabs(documentTabs);
+          renderSheetTabs();
+          if (typeof luckysheet.setSheetActive === 'function') {
+            try { luckysheet.setSheetActive(0); } catch (_) {}
+          }
+        })
+        .catch((err) => alert(err.message));
+      return;
+    }
+    if (action === 'move-left' || action === 'move-right') {
+      const idx = documentTabs.findIndex((t) => t.id === tabId);
+      if (idx < 0) return;
+      const newIdx = action === 'move-left' ? Math.max(0, idx - 1) : Math.min(documentTabs.length - 1, idx + 1);
+      if (newIdx === idx) return;
+      apiRequest(`/sheets/${currentSheetId}/tabs/${tabId}/move`, { method: 'POST', body: { order_index: newIdx } })
+        .then(() => apiRequest(`/sheets/${currentSheetId}`))
+        .then((data) => {
+          documentTabs = data.tabs || [];
+          currentTabId = documentTabs[newIdx].id;
+          createLuckysheetWithTabs(documentTabs);
+          renderSheetTabs();
+          if (typeof luckysheet.setSheetActive === 'function') {
+            try { luckysheet.setSheetActive(newIdx); } catch (_) {}
+          }
+        })
+        .catch((err) => alert(err.message));
+    }
+  }
+
+  if (sheetTabContextMenu) {
+    sheetTabContextMenu.querySelectorAll('.gs-context-item').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleTabContextAction(el.dataset.tabAction);
+      });
+    });
+  }
+  document.addEventListener('click', closeTabContextMenu);
+
+  if (sheetTabsListBtn && sheetTabsListModal) {
+    sheetTabsListBtn.addEventListener('click', () => {
+      if (!sheetTabsListModalUl) return;
+      sheetTabsListModalUl.innerHTML = '';
+      documentTabs.forEach((tab) => {
+        const li = document.createElement('li');
+        li.textContent = tab.name || 'Sheet';
+        li.dataset.tabId = String(tab.id);
+        if (tab.id === currentTabId) li.classList.add('active');
+        li.addEventListener('click', () => {
+          switchToTab(tab.id);
+          sheetTabsListModal.classList.add('hidden');
+        });
+        sheetTabsListModalUl.appendChild(li);
+      });
+      sheetTabsListModal.classList.remove('hidden');
+    });
+  }
+  if (sheetTabsListModal) {
+    const backdrop = document.getElementById('sheet-tabs-list-backdrop');
+    const closeBtn = document.getElementById('sheet-tabs-list-close');
+    if (backdrop) backdrop.addEventListener('click', () => sheetTabsListModal.classList.add('hidden'));
+    if (closeBtn) closeBtn.addEventListener('click', () => sheetTabsListModal.classList.add('hidden'));
   }
 
   function switchToTab(tabId) {
     if (tabId === currentTabId) return;
-    const tab = documentTabs.find((t) => t.id === tabId);
-    if (!tab) return;
+    const order = documentTabs.findIndex((t) => t.id === tabId);
+    if (order < 0) return;
     currentTabId = tabId;
     renderSheetTabs();
-    if (typeof luckysheet.destroy === 'function') {
-      try { luckysheet.destroy(); } catch (_) {}
+    if (luckysheetInitialized && typeof luckysheet.setSheetActive === 'function') {
+      try {
+        luckysheet.setSheetActive(order);
+      } catch (_) {}
     }
-    luckysheetInitialized = false;
-    luckysheet.create({
-      container: 'luckysheet',
-      data: [tab],
-      showinfobar: false,
-      showsheetbar: false,
-      enableAddRow: true,
-      enableAddCol: true,
-      sheetFormulaBar: true,
-      hook: {
-        cellUpdated: (r, c, oldValue, newValue) => {
-          handleLocalCellChange(r, c, newValue);
-          lastSelectedCell = { r, c };
-        }
-      }
-    });
-    luckysheetInitialized = true;
   }
 
   if (homeCreateSheetBtn) {
@@ -398,7 +518,7 @@
     documentTabs = [];
     currentPermission = null;
     if (topUserNameEl) topUserNameEl.textContent = '';
-    if (topSheetNameEl) topSheetNameEl.textContent = '';
+    if (gsDocTitleEl) gsDocTitleEl.textContent = '';
     if (minimalUserName) minimalUserName.textContent = '';
     showView('login');
   }
@@ -419,6 +539,20 @@
       closeSidebar();
       loadHome();
       showView('home');
+    });
+  }
+
+  if (gsDocTitleEl) {
+    gsDocTitleEl.addEventListener('blur', () => {
+      const sheetId = gsDocTitleEl.dataset.sheetId;
+      const name = (gsDocTitleEl.textContent || '').trim() || 'Untitled spreadsheet';
+      if (!sheetId || !currentSheetId || Number(sheetId) !== currentSheetId) return;
+      apiRequest(`/sheets/${currentSheetId}`, { method: 'PATCH', body: { name } })
+        .then(() => { if (gsSaveStatusEl) gsSaveStatusEl.textContent = 'Saved'; })
+        .catch(() => { gsDocTitleEl.textContent = name; });
+    });
+    gsDocTitleEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') e.target.blur();
     });
   }
 
@@ -464,83 +598,63 @@
     closeSidebar();
   });
 
-  if (ribbonTabs) {
-    ribbonTabs.querySelectorAll('.ribbon-tab').forEach((tabEl) => {
-      tabEl.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const tab = tabEl.dataset.tab;
-        if (tab === 'file') {
-          const dropdown = document.getElementById('dropdown-file');
-          const open = dropdown && dropdown.classList.toggle('open');
-          menuDropdowns.querySelectorAll('.menu-dropdown').forEach((d) => d.classList.remove('open'));
-          if (dropdown && open) {
-            const rect = tabEl.getBoundingClientRect();
-            dropdown.style.left = rect.left + 'px';
-            dropdown.style.top = (rect.bottom + 2) + 'px';
-            dropdown.classList.add('open');
-          }
-          return;
-        }
-        ribbonTabs.querySelectorAll('.ribbon-tab').forEach((t) => t.classList.remove('active'));
-        tabEl.classList.add('active');
-        document.querySelectorAll('.ribbon-panel').forEach((p) => p.classList.remove('active'));
-        const panel = document.getElementById('ribbon-' + tab);
-        if (panel) panel.classList.add('active');
-      });
+  const fileMenuBtn = document.querySelector('.gs-menu-item[data-menu="file"]');
+  if (fileMenuBtn && menuDropdowns) {
+    fileMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const dropdown = document.getElementById('dropdown-file');
+      const open = dropdown && dropdown.classList.toggle('open');
+      menuDropdowns.querySelectorAll('.gs-menu-dropdown').forEach((d) => d.classList.remove('open'));
+      if (dropdown && open) {
+        const rect = fileMenuBtn.getBoundingClientRect();
+        dropdown.style.left = rect.left + 'px';
+        dropdown.style.top = (rect.bottom + 2) + 'px';
+        dropdown.classList.add('open');
+      }
     });
   }
   document.addEventListener('click', () => {
-    if (menuDropdowns) menuDropdowns.querySelectorAll('.menu-dropdown').forEach((d) => d.classList.remove('open'));
+    if (menuDropdowns) menuDropdowns.querySelectorAll('.gs-menu-dropdown').forEach((d) => d.classList.remove('open'));
   });
   if (menuDropdowns) {
     menuDropdowns.addEventListener('click', (e) => e.stopPropagation());
     menuDropdowns.addEventListener('click', (e) => {
-      const item = e.target.closest('.menu-dropdown-item');
+      const item = e.target.closest('.gs-menu-dropdown-item');
       if (!item) return;
       const action = item.dataset.action;
-      menuDropdowns.querySelectorAll('.menu-dropdown').forEach((d) => d.classList.remove('open'));
+      menuDropdowns.querySelectorAll('.gs-menu-dropdown').forEach((d) => d.classList.remove('open'));
       if (action === 'new-sheet') {
         (async () => {
           try {
-            const data = await apiRequest('/sheets', { method: 'POST', body: { name: 'Sheet1' } });
+            const data = await apiRequest('/sheets', { method: 'POST', body: { name: 'Untitled spreadsheet' } });
             openSheetView(data.sheet.id, 'owner');
           } catch (err) { alert(err.message); }
         })();
       }
       if (action === 'permissions' && headerShareBtn) headerShareBtn.click();
+      if (action === 'history') { /* version history placeholder */ }
+      if (action === 'export') { /* download placeholder */ }
     });
   }
-
-  document.querySelectorAll('.ribbon-panel').forEach((panel) => {
-    panel.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-action]');
-      if (!btn) return;
-      const action = btn.dataset.action;
-      if (action === 'insert-row-above' || action === 'insert-row-below' || action === 'insert-column-left' || action === 'insert-column-right') return;
-      if (action === 'permissions') { if (headerShareBtn) headerShareBtn.click(); return; }
-      if (action === 'history' || action === 'export') return;
-    });
-  });
 
   if (sheetTabAddBtn) {
     sheetTabAddBtn.addEventListener('click', async () => {
       if (!currentSheetId) return;
       try {
         const defaultName = 'Sheet' + (documentTabs.length + 1);
-        const tab = await apiRequest(`/sheets/${currentSheetId}/tabs`, {
+        const newTab = await apiRequest(`/sheets/${currentSheetId}/tabs`, {
           method: 'POST',
           body: { name: defaultName }
         });
-        documentTabs.push({
-          id: tab.id,
-          name: tab.name,
-          index: documentTabs.length,
-          row: 100,
-          column: 26,
-          celldata: []
-        });
+        const data = await apiRequest(`/sheets/${currentSheetId}`);
+        documentTabs = data.tabs || [];
+        createLuckysheetWithTabs(documentTabs);
+        currentTabId = newTab.id;
         renderSheetTabs();
-        switchToTab(tab.id);
+        const order = documentTabs.findIndex((t) => t.id === newTab.id);
+        if (order >= 0 && typeof luckysheet.setSheetActive === 'function') {
+          try { luckysheet.setSheetActive(order); } catch (_) {}
+        }
       } catch (err) {
         alert(err.message);
       }
@@ -739,6 +853,31 @@
     });
   }
 
+  function createLuckysheetWithTabs(tabsData) {
+    if (typeof luckysheet.destroy === 'function') {
+      try { luckysheet.destroy(); } catch (_) {}
+    }
+    luckysheetInitialized = false;
+    if (!tabsData || tabsData.length === 0) return;
+
+    luckysheet.create({
+      container: 'luckysheet',
+      data: tabsData,
+      showinfobar: false,
+      showsheetbar: false,
+      enableAddRow: true,
+      enableAddCol: true,
+      sheetFormulaBar: true,
+      hook: {
+        cellUpdated: (r, c, oldValue, newValue) => {
+          handleLocalCellChange(r, c, newValue);
+          lastSelectedCell = { r, c };
+        }
+      }
+    });
+    luckysheetInitialized = true;
+  }
+
   async function openSheetView(sheetId, permission) {
     currentSheetId = sheetId;
     currentPermission = permission;
@@ -747,7 +886,11 @@
     const tabs = data.tabs || [];
     documentTabs = tabs;
     currentPermission = data.permission || permission;
-    if (topSheetNameEl) topSheetNameEl.textContent = data.sheet?.name || 'Sheet';
+    if (gsDocTitleEl) {
+      gsDocTitleEl.textContent = data.sheet?.name || 'Untitled spreadsheet';
+      gsDocTitleEl.dataset.sheetId = String(currentSheetId);
+    }
+    if (gsSaveStatusEl) gsSaveStatusEl.textContent = 'Saved';
 
     if (typeof luckysheet.destroy === 'function') {
       try { luckysheet.destroy(); } catch (_) {}
@@ -756,43 +899,23 @@
 
     if (tabs.length === 0) {
       const newTab = await apiRequest(`/sheets/${sheetId}/tabs`, { method: 'POST', body: { name: 'Sheet1' } });
-      documentTabs = [{ id: newTab.id, name: newTab.name, index: 0, row: 100, column: 26, celldata: [] }];
+      documentTabs = [{
+        id: newTab.id,
+        name: newTab.name,
+        index: newTab.id,
+        order: 0,
+        status: 1,
+        row: 100,
+        column: 26,
+        celldata: [],
+        config: {}
+      }];
       currentTabId = newTab.id;
-      luckysheet.create({
-        container: 'luckysheet',
-        data: [documentTabs[0]],
-        showinfobar: false,
-        showsheetbar: false,
-        enableAddRow: true,
-        enableAddCol: true,
-        sheetFormulaBar: true,
-        hook: {
-          cellUpdated: (r, c, oldValue, newValue) => {
-            handleLocalCellChange(r, c, newValue);
-            lastSelectedCell = { r, c };
-          }
-        }
-      });
-      luckysheetInitialized = true;
     } else {
       currentTabId = tabs[0].id;
-      luckysheet.create({
-        container: 'luckysheet',
-        data: [tabs[0]],
-        showinfobar: false,
-        showsheetbar: false,
-        enableAddRow: true,
-        enableAddCol: true,
-        sheetFormulaBar: true,
-        hook: {
-          cellUpdated: (r, c, oldValue, newValue) => {
-            handleLocalCellChange(r, c, newValue);
-            lastSelectedCell = { r, c };
-          }
-        }
-      });
-      luckysheetInitialized = true;
     }
+
+    createLuckysheetWithTabs(documentTabs);
 
     if (socket && socket.connected) {
       socket.emit('join_sheet', { sheetId });
