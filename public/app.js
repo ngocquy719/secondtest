@@ -3,6 +3,8 @@
   let authToken = null;
   let currentUser = null;
   let currentSheetId = null;
+  let currentTabId = null;
+  let documentTabs = [];
   let currentPermission = null;
   let socket = null;
   let luckysheetInitialized = false;
@@ -25,7 +27,6 @@
   const ribbonTabs = document.getElementById('ribbon-tabs');
   const sheetTabsList = document.getElementById('sheet-tabs-list');
   const sheetTabAddBtn = document.getElementById('sheet-tab-add');
-  let sheetsForTabs = [];
 
   const sidebarOverlay = document.getElementById('sidebar-overlay');
   const sidebarBackdrop = document.getElementById('sidebar-backdrop');
@@ -296,10 +297,10 @@
   async function loadSheetsList() {
     try {
       const data = await apiRequest('/sheets');
-      sheetsForTabs = data.sheets || [];
+      const sheets = data.sheets || [];
       if (sheetsListEl) {
         sheetsListEl.innerHTML = '';
-        sheetsForTabs.forEach((s) => {
+        sheets.forEach((s) => {
           const li = document.createElement('li');
           li.dataset.id = String(s.id);
           li.textContent = s.name || 'Sheet';
@@ -311,7 +312,6 @@
           sheetsListEl.appendChild(li);
         });
       }
-      renderSheetTabs();
     } catch (err) {
       console.error('Failed to load sheets', err);
     }
@@ -320,29 +320,55 @@
   function renderSheetTabs() {
     if (!sheetTabsList) return;
     sheetTabsList.innerHTML = '';
-    sheetsForTabs.forEach((s) => {
-      const tab = document.createElement('button');
-      tab.type = 'button';
-      tab.className = 'sheet-tab' + (s.id === currentSheetId ? ' active' : '');
-      tab.dataset.id = String(s.id);
-      tab.textContent = s.name || 'Sheet';
-      tab.title = s.name || 'Sheet';
-      tab.addEventListener('click', () => openSheetView(s.id, s.permission));
-      tab.addEventListener('dblclick', (e) => {
+    documentTabs.forEach((tab) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'sheet-tab' + (tab.id === currentTabId ? ' active' : '');
+      btn.dataset.tabId = String(tab.id);
+      btn.textContent = tab.name || 'Sheet';
+      btn.title = tab.name || 'Sheet';
+      btn.addEventListener('click', () => switchToTab(tab.id));
+      btn.addEventListener('dblclick', (e) => {
         e.preventDefault();
-        const newName = prompt('Rename sheet', s.name || 'Sheet');
+        const newName = prompt('Rename tab', tab.name || 'Sheet');
         if (newName == null || newName.trim() === '') return;
-        apiRequest(`/sheets/${s.id}`, { method: 'PATCH', body: { name: newName.trim() } })
+        apiRequest(`/sheets/${currentSheetId}/tabs/${tab.id}`, { method: 'PATCH', body: { name: newName.trim() } })
           .then(() => {
-            s.name = newName.trim();
-            tab.textContent = s.name;
-            tab.title = s.name;
-            if (currentSheetId === s.id && topSheetNameEl) topSheetNameEl.textContent = s.name;
+            tab.name = newName.trim();
+            btn.textContent = tab.name;
+            btn.title = tab.name;
           })
           .catch((err) => alert(err.message));
       });
-      sheetTabsList.appendChild(tab);
+      sheetTabsList.appendChild(btn);
     });
+  }
+
+  function switchToTab(tabId) {
+    if (tabId === currentTabId) return;
+    const tab = documentTabs.find((t) => t.id === tabId);
+    if (!tab) return;
+    currentTabId = tabId;
+    renderSheetTabs();
+    if (typeof luckysheet.destroy === 'function') {
+      try { luckysheet.destroy(); } catch (_) {}
+    }
+    luckysheetInitialized = false;
+    luckysheet.create({
+      container: 'luckysheet',
+      data: [tab],
+      showinfobar: false,
+      enableAddRow: true,
+      enableAddCol: true,
+      sheetFormulaBar: true,
+      hook: {
+        cellUpdated: (r, c, oldValue, newValue) => {
+          handleLocalCellChange(r, c, newValue);
+          lastSelectedCell = { r, c };
+        }
+      }
+    });
+    luckysheetInitialized = true;
   }
 
   if (createSheetBtn) {
@@ -408,6 +434,8 @@
     setAuth(null, null);
     luckysheetInitialized = false;
     currentSheetId = null;
+    currentTabId = null;
+    documentTabs = [];
     currentPermission = null;
     topUserNameEl.textContent = '';
     topSheetNameEl.textContent = '';
@@ -519,12 +547,23 @@
 
   if (sheetTabAddBtn) {
     sheetTabAddBtn.addEventListener('click', async () => {
+      if (!currentSheetId) return;
       try {
-        const name = prompt('Sheet name?', 'Sheet' + (sheetsForTabs.length + 1));
-        const data = await apiRequest('/sheets', { method: 'POST', body: { name: name || 'Sheet1' } });
-        sheetsForTabs.push({ id: data.sheet.id, name: data.sheet.name || 'Sheet1', permission: 'owner' });
-        await loadSheetsList();
-        openSheetView(data.sheet.id, 'owner');
+        const name = prompt('Tab name?', 'Sheet' + (documentTabs.length + 1));
+        const tab = await apiRequest(`/sheets/${currentSheetId}/tabs`, {
+          method: 'POST',
+          body: { name: name || ('Sheet' + (documentTabs.length + 1)) }
+        });
+        documentTabs.push({
+          id: tab.id,
+          name: tab.name,
+          index: documentTabs.length,
+          row: 100,
+          column: 26,
+          celldata: []
+        });
+        renderSheetTabs();
+        switchToTab(tab.id);
       } catch (err) {
         alert(err.message);
       }
@@ -708,11 +747,10 @@
     });
 
     socket.on('cell_update', (payload) => {
-      const { sheetId, row, column, value } = payload || {};
+      const { sheetId, sheetTabId, row, column, value } = payload || {};
       if (!luckysheetInitialized) return;
-      if (sheetId !== currentSheetId) return;
+      if (sheetId !== currentSheetId || sheetTabId !== currentTabId) return;
 
-      // Avoid echo loop when we just triggered this update
       isApplyingRemoteUpdate = true;
       try {
         luckysheet.setCellValue(row, column, value);
@@ -735,21 +773,28 @@
     }
 
     const data = await apiRequest(`/sheets/${sheetId}`);
-    const sheetObj = data.sheet;
+    const tabs = data.tabs || [];
+    documentTabs = tabs;
     currentPermission = data.permission || permission;
-    topSheetNameEl.textContent = sheetObj.name || 'Sheet';
+    if (topSheetNameEl) topSheetNameEl.textContent = data.sheet?.name || 'Sheet';
 
-    if (!luckysheetInitialized) {
-      // Initialize Luckysheet for this sheet
+    if (typeof luckysheet.destroy === 'function') {
+      try { luckysheet.destroy(); } catch (_) {}
+    }
+    luckysheetInitialized = false;
+
+    if (tabs.length === 0) {
+      const newTab = await apiRequest(`/sheets/${sheetId}/tabs`, { method: 'POST', body: { name: 'Sheet1' } });
+      documentTabs = [{ id: newTab.id, name: newTab.name, index: 0, row: 100, column: 26, celldata: [] }];
+      currentTabId = newTab.id;
       luckysheet.create({
         container: 'luckysheet',
-        data: [sheetObj],
+        data: [documentTabs[0]],
         showinfobar: false,
         enableAddRow: true,
         enableAddCol: true,
         sheetFormulaBar: true,
         hook: {
-          // Commit event: Enter / blur / move
           cellUpdated: (r, c, oldValue, newValue) => {
             handleLocalCellChange(r, c, newValue);
             lastSelectedCell = { r, c };
@@ -758,16 +803,10 @@
       });
       luckysheetInitialized = true;
     } else {
-      // Destroy previous sheet and re-create for the new one
-      if (typeof luckysheet.destroy === 'function') {
-        try {
-          luckysheet.destroy();
-        } catch (_) {}
-      }
-      luckysheetInitialized = false;
+      currentTabId = tabs[0].id;
       luckysheet.create({
         container: 'luckysheet',
-        data: [sheetObj],
+        data: [tabs[0]],
         showinfobar: false,
         enableAddRow: true,
         enableAddCol: true,
@@ -815,6 +854,7 @@
 
     const payload = {
       sheetId: currentSheetId,
+      sheetTabId: currentTabId,
       row: r,
       column: c,
       value,

@@ -129,22 +129,20 @@ io.on('connection', (socket) => {
     });
   });
 
-  // Cell update handling
+  // Cell update handling (per sheet + sheet_tab)
   socket.on('cell_update', (payload) => {
-    const { sheetId, row, column, value, timestamp } = payload || {};
+    const { sheetId, sheetTabId, row, column, value, timestamp } = payload || {};
     if (
       typeof sheetId !== 'number' ||
+      typeof sheetTabId !== 'number' ||
       typeof row !== 'number' ||
       typeof column !== 'number'
     ) {
       return;
     }
 
-    // Check permissions (owner or editor)
     db.get(
-      `SELECT sp.role
-       FROM sheet_permissions sp
-       WHERE sp.sheet_id = ? AND sp.user_id = ?`,
+      `SELECT sp.role FROM sheet_permissions sp WHERE sp.sheet_id = ? AND sp.user_id = ?`,
       [sheetId, user.id],
       (err, perm) => {
         if (err) {
@@ -152,26 +150,22 @@ io.on('connection', (socket) => {
           return;
         }
         if (!perm || (perm.role !== 'owner' && perm.role !== 'editor')) {
-          // Read-only or no access
           return;
         }
 
         const now = new Date().toISOString();
+        const userId = user.id;
 
-        // Upsert cell
         db.get(
-          `SELECT id FROM cells WHERE sheet_id = ? AND row = ? AND column = ?`,
-          [sheetId, row, column],
+          `SELECT id FROM cells WHERE sheet_id = ? AND sheet_tab_id = ? AND row = ? AND column = ?`,
+          [sheetId, sheetTabId, row, column],
           (err2, cell) => {
             if (err2) {
               console.error('cell select error', err2);
               return;
             }
 
-            const userId = user.id;
-
             if (!value || value === '') {
-              // If empty, delete cell if exists
               if (cell) {
                 db.run('DELETE FROM cells WHERE id = ?', [cell.id], (err3) => {
                   if (err3) console.error('cell delete error', err3);
@@ -179,35 +173,29 @@ io.on('connection', (socket) => {
               }
             } else if (cell) {
               db.run(
-                `UPDATE cells
-                 SET value = ?, updated_at = ?, updated_by = ?
-                 WHERE id = ?`,
+                `UPDATE cells SET value = ?, updated_at = ?, updated_by = ? WHERE id = ?`,
                 [String(value), now, userId, cell.id],
-                (err3) => {
-                  if (err3) console.error('cell update error', err3);
-                }
+                (err3) => { if (err3) console.error('cell update error', err3); }
               );
             } else {
               db.run(
-                `INSERT INTO cells (sheet_id, row, column, value, updated_at, updated_by)
-                 VALUES (?, ?, ?, ?, ?, ?)`,
-                [sheetId, row, column, String(value), now, userId],
-                (err3) => {
-                  if (err3) console.error('cell insert error', err3);
-                }
+                `INSERT INTO cells (sheet_id, sheet_tab_id, row, column, value, updated_at, updated_by)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [sheetId, sheetTabId, row, column, String(value), now, userId],
+                (err3) => { if (err3) console.error('cell insert error', err3); }
               );
             }
 
             const room = `sheet_${sheetId}`;
-            const out = {
+            io.to(room).emit('cell_update', {
               sheetId,
+              sheetTabId,
               row,
               column,
               value,
               userId,
               timestamp: timestamp || now
-            };
-            io.to(room).emit('cell_update', out);
+            });
           }
         );
       }

@@ -69,21 +69,74 @@ async function initDb() {
     )
   `);
 
-  // Cells
+  // Sheet tabs (worksheets inside one document, like Google Sheets)
   await runAsync(`
-    CREATE TABLE IF NOT EXISTS cells (
+    CREATE TABLE IF NOT EXISTS sheet_tabs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       sheet_id INTEGER NOT NULL,
-      row INTEGER NOT NULL,
-      column INTEGER NOT NULL,
-      value TEXT,
-      updated_at TEXT NOT NULL,
-      updated_by INTEGER NOT NULL,
-      UNIQUE (sheet_id, row, column),
-      FOREIGN KEY (sheet_id) REFERENCES sheets(id),
-      FOREIGN KEY (updated_by) REFERENCES users(id)
+      name TEXT NOT NULL,
+      order_index INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY (sheet_id) REFERENCES sheets(id)
     )
   `);
+
+  const info = await new Promise((resolve, reject) => {
+    db.all(`PRAGMA table_info(cells)`, (err, rows) => { if (err) reject(err); else resolve(rows || []); });
+  });
+  const hasCol = info.some((r) => r.name === 'sheet_tab_id');
+  if (info.length === 0) {
+    await runAsync(`
+      CREATE TABLE cells (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sheet_id INTEGER NOT NULL,
+        sheet_tab_id INTEGER NOT NULL,
+        row INTEGER NOT NULL,
+        column INTEGER NOT NULL,
+        value TEXT,
+        updated_at TEXT NOT NULL,
+        updated_by INTEGER NOT NULL,
+        UNIQUE (sheet_id, sheet_tab_id, row, column),
+        FOREIGN KEY (sheet_id) REFERENCES sheets(id),
+        FOREIGN KEY (sheet_tab_id) REFERENCES sheet_tabs(id),
+        FOREIGN KEY (updated_by) REFERENCES users(id)
+      )
+    `);
+  } else if (!hasCol) {
+    const sheets = await new Promise((resolve, reject) => {
+      db.all(`SELECT id FROM sheets`, (err, rows) => { if (err) reject(err); else resolve(rows); });
+    });
+    for (const s of sheets) {
+      const tabRow = await getAsync(`SELECT id FROM sheet_tabs WHERE sheet_id = ? LIMIT 1`, [s.id]);
+      const tabId = tabRow ? tabRow.id : (await runAsync(`INSERT INTO sheet_tabs (sheet_id, name, order_index) VALUES (?, 'Sheet1', 0)`, [s.id])).lastID;
+    }
+    await runAsync(`
+      CREATE TABLE cells_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sheet_id INTEGER NOT NULL,
+        sheet_tab_id INTEGER NOT NULL,
+        row INTEGER NOT NULL,
+        column INTEGER NOT NULL,
+        value TEXT,
+        updated_at TEXT NOT NULL,
+        updated_by INTEGER NOT NULL,
+        UNIQUE (sheet_id, sheet_tab_id, row, column),
+        FOREIGN KEY (sheet_id) REFERENCES sheets(id),
+        FOREIGN KEY (sheet_tab_id) REFERENCES sheet_tabs(id),
+        FOREIGN KEY (updated_by) REFERENCES users(id)
+      )
+    `);
+    for (const s of sheets) {
+      const tabRow = await getAsync(`SELECT id FROM sheet_tabs WHERE sheet_id = ? ORDER BY order_index LIMIT 1`, [s.id]);
+      const tabId = tabRow.id;
+      await runAsync(
+        `INSERT INTO cells_new (id, sheet_id, sheet_tab_id, row, column, value, updated_at, updated_by)
+         SELECT id, sheet_id, ?, row, column, value, updated_at, updated_by FROM cells WHERE sheet_id = ?`,
+        [tabId, s.id]
+      );
+    }
+    await runAsync(`DROP TABLE cells`);
+    await runAsync(`ALTER TABLE cells_new RENAME TO cells`);
+  }
 
   // Seed default admin user
   const existingAdmin = await getAsync(

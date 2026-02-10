@@ -595,5 +595,10 @@ body:not(.gs-logged-in) .ribbon { display: none; }
 body:not(.gs-logged-in) .app-header-right { display: none; }
 body:not(.gs-logged-in) .sheet-canvas { display: block; }
 
+/* Header + ribbon only when a sheet (document) is open */
+body.gs-logged-in:not(.gs-view-sheet) .app-header-center,
+body.gs-logged-in:not(.gs-view-sheet) .app-btn-share { display: none !important; }
+body.gs-logged-in:not(.gs-view-sheet) .ribbon { display: none !important; }
+
 body.gs-view-sheet .formula-bar { display: flex; }
 body:not(.gs-view-sheet) #view-sheet .formula-bar { display: none; }

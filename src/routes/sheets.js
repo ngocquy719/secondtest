@@ -7,20 +7,15 @@ if (!db || typeof db.get !== 'function' || typeof db.all !== 'function' || typeo
 
 const router = express.Router();
 
-// Helper: build luckysheet sheet object from DB rows
-function buildLuckysheetData(sheetRow, cellRows) {
-  const celldata = cellRows.map((c) => ({
+function buildLuckysheetData(tabId, tabName, cellRows) {
+  const celldata = (cellRows || []).map((c) => ({
     r: c.row,
     c: c.column,
-    v: {
-      v: c.value,
-      m: c.value
-    }
+    v: { v: c.value, m: c.value }
   }));
-
   return {
-    id: sheetRow.id,
-    name: sheetRow.name || 'Sheet1',
+    id: tabId,
+    name: tabName || 'Sheet1',
     index: 0,
     row: 100,
     column: 26,
@@ -49,12 +44,11 @@ router.get('/', (req, res) => {
   );
 });
 
-// Create a new sheet; creator becomes owner
+// Create a new sheet (document); creator becomes owner; one default tab "Sheet1"
 router.post('/', (req, res) => {
   const current = req.user;
   const { name } = req.body;
   const sheetName = name || 'Sheet1';
-
   const now = new Date().toISOString();
 
   db.run(
@@ -66,48 +60,45 @@ router.post('/', (req, res) => {
         console.error('sheet create error', err);
         return res.status(500).json({ error: 'Internal server error' });
       }
-
       const sheetId = this.lastID;
-
       db.run(
-        `INSERT INTO sheet_permissions (sheet_id, user_id, role)
-         VALUES (?, ?, 'owner')`,
+        `INSERT INTO sheet_permissions (sheet_id, user_id, role) VALUES (?, ?, 'owner')`,
         [sheetId, current.id],
         (err2) => {
           if (err2) {
             console.error('sheet perm owner error', err2);
             return res.status(500).json({ error: 'Internal server error' });
           }
-
-          // New sheet must be initialized with an empty celldata array
-          const sheetObj = {
-            id: sheetId,
-            name: 'Sheet1',
-            index: 0,
-            row: 100,
-            column: 26,
-            celldata: []
-          };
-
-          res.status(201).json({ sheet: sheetObj });
+          db.run(
+            `INSERT INTO sheet_tabs (sheet_id, name, order_index) VALUES (?, 'Sheet1', 0)`,
+            [sheetId],
+            function (err3) {
+              if (err3) {
+                console.error('sheet tab create error', err3);
+                return res.status(500).json({ error: 'Internal server error' });
+              }
+              const tabId = this.lastID;
+              res.status(201).json({
+                sheet: { id: sheetId, name: sheetName },
+                tab: { id: tabId, name: 'Sheet1', order_index: 0 }
+              });
+            }
+          );
         }
       );
     }
   );
 });
 
-// Get sheet data for Luckysheet (single fetch per sheet on frontend)
+// Get sheet (document) + all tabs with cell data for Luckysheet
 router.get('/:id', (req, res) => {
   const current = req.user;
   const sheetId = Number(req.params.id);
-
   if (Number.isNaN(sheetId)) {
     return res.status(400).json({ error: 'Invalid sheet id' });
   }
-
-  // Check permission
   db.get(
-    `SELECT s.id, s.name, s.owner_id, s.created_at, s.updated_at, sp.role AS permission
+    `SELECT s.id, s.name, sp.role AS permission
      FROM sheets s
      JOIN sheet_permissions sp ON sp.sheet_id = s.id
      WHERE s.id = ? AND sp.user_id = ?`,
@@ -120,21 +111,111 @@ router.get('/:id', (req, res) => {
       if (!sheetRow) {
         return res.status(404).json({ error: 'Sheet not found' });
       }
-
       db.all(
-        `SELECT id, row, column, value, updated_at, updated_by
-         FROM cells
-         WHERE sheet_id = ?
-         ORDER BY row, column`,
+        `SELECT id, name, order_index FROM sheet_tabs WHERE sheet_id = ? ORDER BY order_index, id`,
         [sheetId],
-        (err2, cellRows) => {
+        (err2, tabRows) => {
           if (err2) {
-            console.error('sheet cells error', err2);
+            console.error('sheet tabs error', err2);
             return res.status(500).json({ error: 'Internal server error' });
           }
+          const tabs = tabRows || [];
+          if (tabs.length === 0) {
+            return res.json({
+              sheet: { id: sheetRow.id, name: sheetRow.name },
+              permission: sheetRow.permission,
+              tabs: []
+            });
+          }
+          let pending = tabs.length;
+          const tabData = [];
+          tabs.forEach((tab, idx) => {
+            db.all(
+              `SELECT row, column, value FROM cells WHERE sheet_id = ? AND sheet_tab_id = ? ORDER BY row, column`,
+              [sheetId, tab.id],
+              (err3, cellRows) => {
+                if (err3) {
+                  pending = -1;
+                  return;
+                }
+                tabData[idx] = buildLuckysheetData(tab.id, tab.name, cellRows || []);
+                tabData[idx].index = idx;
+                pending--;
+                if (pending === 0) {
+                  res.json({
+                    sheet: { id: sheetRow.id, name: sheetRow.name },
+                    permission: sheetRow.permission,
+                    tabs: tabData
+                  });
+                }
+              }
+            );
+          });
+        }
+      );
+    }
+  );
+});
 
-          const sheetObj = buildLuckysheetData(sheetRow, cellRows);
-          res.json({ sheet: sheetObj, permission: sheetRow.permission });
+// Add a new tab to a sheet (document)
+router.post('/:id/tabs', (req, res) => {
+  const current = req.user;
+  const sheetId = Number(req.params.id);
+  const { name } = req.body;
+  if (Number.isNaN(sheetId)) return res.status(400).json({ error: 'Invalid sheet id' });
+  db.get(
+    `SELECT sp.role FROM sheet_permissions sp WHERE sp.sheet_id = ? AND sp.user_id = ?`,
+    [sheetId, current.id],
+    (err, perm) => {
+      if (err) return res.status(500).json({ error: 'Internal server error' });
+      if (!perm || (perm.role !== 'owner' && perm.role !== 'editor')) {
+        return res.status(403).json({ error: 'No permission to add tab' });
+      }
+      db.get(
+        `SELECT COALESCE(MAX(order_index), -1) + 1 AS next FROM sheet_tabs WHERE sheet_id = ?`,
+        [sheetId],
+        (e, r) => {
+          if (e) return res.status(500).json({ error: 'Internal server error' });
+          const orderIndex = r ? r.next : 0;
+          const tabName = (name && String(name).trim()) || 'Sheet' + (orderIndex + 1);
+          db.run(
+            `INSERT INTO sheet_tabs (sheet_id, name, order_index) VALUES (?, ?, ?)`,
+            [sheetId, tabName, orderIndex],
+            function (err2) {
+              if (err2) return res.status(500).json({ error: 'Internal server error' });
+              res.status(201).json({ id: this.lastID, name: tabName, order_index: orderIndex });
+            }
+          );
+        }
+      );
+    }
+  );
+});
+
+// Rename a tab
+router.patch('/:id/tabs/:tabId', (req, res) => {
+  const current = req.user;
+  const sheetId = Number(req.params.id);
+  const tabId = Number(req.params.tabId);
+  const { name } = req.body;
+  if (Number.isNaN(sheetId) || Number.isNaN(tabId) || typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'Invalid request' });
+  }
+  db.get(
+    `SELECT sp.role FROM sheet_permissions sp WHERE sp.sheet_id = ? AND sp.user_id = ?`,
+    [sheetId, current.id],
+    (err, perm) => {
+      if (err) return res.status(500).json({ error: 'Internal server error' });
+      if (!perm || (perm.role !== 'owner' && perm.role !== 'editor')) {
+        return res.status(403).json({ error: 'No permission to rename tab' });
+      }
+      db.run(
+        `UPDATE sheet_tabs SET name = ? WHERE id = ? AND sheet_id = ?`,
+        [name.trim(), tabId, sheetId],
+        function (err2) {
+          if (err2) return res.status(500).json({ error: 'Internal server error' });
+          if (this.changes === 0) return res.status(404).json({ error: 'Tab not found' });
+          res.json({ ok: true });
         }
       );
     }
@@ -145,6 +226,7 @@ router.get('/:id', (req, res) => {
 router.get('/:id/cell-meta', (req, res) => {
   const current = req.user;
   const sheetId = Number(req.params.id);
+  const tabId = Number(req.query.tabId);
   const row = Number(req.query.row);
   const column = Number(req.query.column);
 
@@ -152,27 +234,26 @@ router.get('/:id/cell-meta', (req, res) => {
     return res.status(400).json({ error: 'Invalid sheet/cell coordinates' });
   }
 
-  // Check permission (viewer/editor/owner all can see metadata)
   db.get(
-    `SELECT sp.role
-     FROM sheet_permissions sp
-     WHERE sp.sheet_id = ? AND sp.user_id = ?`,
+    `SELECT sp.role FROM sheet_permissions sp WHERE sp.sheet_id = ? AND sp.user_id = ?`,
     [sheetId, current.id],
     (err, perm) => {
       if (err) {
         console.error('cell-meta perm error', err);
         return res.status(500).json({ error: 'Internal server error' });
       }
-      if (!perm) {
-        return res.status(403).json({ error: 'No access' });
-      }
+      if (!perm) return res.status(403).json({ error: 'No access' });
 
-      db.get(
-        `SELECT c.value, c.updated_at, c.updated_by, u.username AS updated_by_username
-         FROM cells c
-         JOIN users u ON u.id = c.updated_by
-         WHERE c.sheet_id = ? AND c.row = ? AND c.column = ?`,
-        [sheetId, row, column],
+      const needTab = tabId && !Number.isNaN(tabId);
+      const cellSql = needTab
+        ? `SELECT c.value, c.updated_at, c.updated_by, u.username AS updated_by_username
+           FROM cells c JOIN users u ON u.id = c.updated_by
+           WHERE c.sheet_id = ? AND c.sheet_tab_id = ? AND c.row = ? AND c.column = ?`
+        : `SELECT c.value, c.updated_at, c.updated_by, u.username AS updated_by_username
+           FROM cells c JOIN users u ON u.id = c.updated_by
+           WHERE c.sheet_id = ? AND c.row = ? AND c.column = ?`;
+      const cellParams = needTab ? [sheetId, tabId, row, column] : [sheetId, row, column];
+      db.get(cellSql, cellParams,
         (err2, cell) => {
           if (err2) {
             console.error('cell-meta lookup error', err2);
