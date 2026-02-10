@@ -697,7 +697,6 @@
           renderSheetTabs();
           triggerLuckysheetSheetTabClick(minimalSheet.order);
         }
-        triggerLuckysheetSheetTabClick(order);
       } catch (err) {
         console.error('Add sheet tab failed', err);
         alert(err && err.message ? err.message : 'Failed to add sheet');
