@@ -10,9 +10,35 @@
   const lastCellValues = {};
   let lastSelectedCell = { r: 0, c: 0 };
 
-  function getSheets() { return (window.SheetManager && SheetManager.getState().sheets) || []; }
-  function getActiveSheetId() { return (window.SheetManager && SheetManager.getState().activeSheetId) || null; }
-  function setActiveSheetId(id) { if (window.SheetManager) SheetManager.switchSheet(id); }
+  // Luckysheet helpers: use Luckysheet's own workbook as the ONLY sheet store.
+  function getSheets() {
+    if (!luckysheetInitialized || typeof luckysheet === 'undefined' || typeof luckysheet.getAllSheets !== 'function') {
+      return [];
+    }
+    try {
+      return luckysheet.getAllSheets() || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function getActiveSheetId() {
+    const sheets = getSheets();
+    if (!sheets.length) return null;
+    const active = sheets.find((s) => s.status === 1) || sheets[0];
+    // We encode DB tab id into sheet.index (see buildLuckysheetData)
+    return active ? active.index : null;
+  }
+
+  function setActiveSheetId(tabId) {
+    if (!luckysheetInitialized || typeof luckysheet === 'undefined' || typeof luckysheet.setSheetActive !== 'function') return;
+    const sheets = getSheets();
+    const target = sheets.find((s) => String(s.index) === String(tabId));
+    if (!target || typeof target.order !== 'number') return;
+    try {
+      luckysheet.setSheetActive(target.order);
+    } catch (_) {}
+  }
 
   const topUserNameEl = document.getElementById('top-user-name');
   const topLogoutBtn = document.getElementById('top-logout-btn');
