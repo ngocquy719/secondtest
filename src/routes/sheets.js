@@ -132,6 +132,7 @@ router.get('/:id', (req, res) => {
             });
           }
           let pending = tabs.length;
+          let responded = false;
           const tabData = [];
           tabs.forEach((tab, idx) => {
             db.all(
@@ -139,12 +140,17 @@ router.get('/:id', (req, res) => {
               [sheetId, tab.id],
               (err3, cellRows) => {
                 if (err3) {
-                  pending = -1;
+                  if (!responded) {
+                    responded = true;
+                    console.error('sheet get cells error', err3);
+                    res.status(500).json({ error: 'Internal server error' });
+                  }
                   return;
                 }
                 tabData[idx] = buildLuckysheetData(tab.id, tab.name, tab.order_index ?? idx, idx === 0, cellRows || []);
                 pending--;
-                if (pending === 0) {
+                if (pending === 0 && !responded) {
+                  responded = true;
                   res.json({
                     sheet: { id: sheetRow.id, name: sheetRow.name },
                     permission: sheetRow.permission,
@@ -170,7 +176,10 @@ router.post('/:id/tabs', (req, res) => {
     `SELECT sp.role FROM sheet_permissions sp WHERE sp.sheet_id = ? AND sp.user_id = ?`,
     [sheetId, current.id],
     (err, perm) => {
-      if (err) return res.status(500).json({ error: 'Internal server error' });
+      if (err) {
+        console.error('add tab perm error', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
       if (!perm || (perm.role !== 'owner' && perm.role !== 'editor')) {
         return res.status(403).json({ error: 'No permission to add tab' });
       }
@@ -178,14 +187,20 @@ router.post('/:id/tabs', (req, res) => {
         `SELECT COALESCE(MAX(order_index), -1) + 1 AS next FROM sheet_tabs WHERE sheet_id = ?`,
         [sheetId],
         (e, r) => {
-          if (e) return res.status(500).json({ error: 'Internal server error' });
+          if (e) {
+            console.error('add tab next order error', e);
+            return res.status(500).json({ error: 'Internal server error' });
+          }
           const orderIndex = r ? r.next : 0;
           const tabName = (name && String(name).trim()) || 'Sheet' + (orderIndex + 1);
           db.run(
             `INSERT INTO sheet_tabs (sheet_id, name, order_index) VALUES (?, ?, ?)`,
             [sheetId, tabName, orderIndex],
             function (err2) {
-              if (err2) return res.status(500).json({ error: 'Internal server error' });
+              if (err2) {
+                console.error('add tab insert error', err2);
+                return res.status(500).json({ error: 'Internal server error' });
+              }
               res.status(201).json({ id: this.lastID, name: tabName, order_index: orderIndex });
             }
           );
@@ -208,7 +223,10 @@ router.patch('/:id/tabs/:tabId', (req, res) => {
     `SELECT sp.role FROM sheet_permissions sp WHERE sp.sheet_id = ? AND sp.user_id = ?`,
     [sheetId, current.id],
     (err, perm) => {
-      if (err) return res.status(500).json({ error: 'Internal server error' });
+      if (err) {
+        console.error('rename tab perm error', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
       if (!perm || (perm.role !== 'owner' && perm.role !== 'editor')) {
         return res.status(403).json({ error: 'No permission to rename tab' });
       }
@@ -216,7 +234,10 @@ router.patch('/:id/tabs/:tabId', (req, res) => {
         `UPDATE sheet_tabs SET name = ? WHERE id = ? AND sheet_id = ?`,
         [name.trim(), tabId, sheetId],
         function (err2) {
-          if (err2) return res.status(500).json({ error: 'Internal server error' });
+          if (err2) {
+            console.error('rename tab update error', err2);
+            return res.status(500).json({ error: 'Internal server error' });
+          }
           if (this.changes === 0) return res.status(404).json({ error: 'Tab not found' });
           res.json({ ok: true });
         }
@@ -237,7 +258,10 @@ router.delete('/:id/tabs/:tabId', (req, res) => {
     `SELECT sp.role FROM sheet_permissions sp WHERE sp.sheet_id = ? AND sp.user_id = ?`,
     [sheetId, current.id],
     (err, perm) => {
-      if (err) return res.status(500).json({ error: 'Internal server error' });
+      if (err) {
+        console.error('delete tab perm error', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
       if (!perm || (perm.role !== 'owner' && perm.role !== 'editor')) {
         return res.status(403).json({ error: 'No permission to delete tab' });
       }
@@ -245,17 +269,26 @@ router.delete('/:id/tabs/:tabId', (req, res) => {
         `SELECT COUNT(*) AS cnt FROM sheet_tabs WHERE sheet_id = ?`,
         [sheetId],
         (err2, row) => {
-          if (err2) return res.status(500).json({ error: 'Internal server error' });
+          if (err2) {
+            console.error('delete tab count error', err2);
+            return res.status(500).json({ error: 'Internal server error' });
+          }
           if (row && row.cnt <= 1) {
             return res.status(400).json({ error: 'Cannot delete the only sheet tab' });
           }
           db.run('DELETE FROM cells WHERE sheet_id = ? AND sheet_tab_id = ?', [sheetId, tabId], (err3) => {
-            if (err3) return res.status(500).json({ error: 'Internal server error' });
+            if (err3) {
+              console.error('delete tab cells error', err3);
+              return res.status(500).json({ error: 'Internal server error' });
+            }
             db.run(
               'DELETE FROM sheet_tabs WHERE id = ? AND sheet_id = ?',
               [tabId, sheetId],
               function (err4) {
-                if (err4) return res.status(500).json({ error: 'Internal server error' });
+                if (err4) {
+                  console.error('delete tab error', err4);
+                  return res.status(500).json({ error: 'Internal server error' });
+                }
                 if (this.changes === 0) return res.status(404).json({ error: 'Tab not found' });
                 res.json({ ok: true });
               }
@@ -279,7 +312,10 @@ router.post('/:id/tabs/:tabId/duplicate', (req, res) => {
     `SELECT sp.role FROM sheet_permissions sp WHERE sp.sheet_id = ? AND sp.user_id = ?`,
     [sheetId, current.id],
     (err, perm) => {
-      if (err) return res.status(500).json({ error: 'Internal server error' });
+      if (err) {
+        console.error('duplicate tab perm error', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
       if (!perm || (perm.role !== 'owner' && perm.role !== 'editor')) {
         return res.status(403).json({ error: 'No permission' });
       }
@@ -287,26 +323,38 @@ router.post('/:id/tabs/:tabId/duplicate', (req, res) => {
         `SELECT id, name FROM sheet_tabs WHERE id = ? AND sheet_id = ?`,
         [tabId, sheetId],
         (err2, tab) => {
-          if (err2) return res.status(500).json({ error: 'Internal server error' });
+          if (err2) {
+            console.error('duplicate tab get error', err2);
+            return res.status(500).json({ error: 'Internal server error' });
+          }
           if (!tab) return res.status(404).json({ error: 'Tab not found' });
           db.get(
             `SELECT COALESCE(MAX(order_index), -1) + 1 AS next FROM sheet_tabs WHERE sheet_id = ?`,
             [sheetId],
             (e, r) => {
-              if (e) return res.status(500).json({ error: 'Internal server error' });
+              if (e) {
+                console.error('duplicate tab order error', e);
+                return res.status(500).json({ error: 'Internal server error' });
+              }
               const orderIndex = r ? r.next : 0;
               const newName = (tab.name || 'Sheet') + ' Copy';
               db.run(
                 `INSERT INTO sheet_tabs (sheet_id, name, order_index) VALUES (?, ?, ?)`,
                 [sheetId, newName, orderIndex],
                 function (err3) {
-                  if (err3) return res.status(500).json({ error: 'Internal server error' });
+                  if (err3) {
+                    console.error('duplicate tab insert error', err3);
+                    return res.status(500).json({ error: 'Internal server error' });
+                  }
                   const newTabId = this.lastID;
                   db.all(
                     `SELECT row, column, value FROM cells WHERE sheet_id = ? AND sheet_tab_id = ?`,
                     [sheetId, tabId],
                     (err4, cells) => {
-                      if (err4) return res.status(500).json({ error: 'Internal server error' });
+                      if (err4) {
+                        console.error('duplicate tab cells error', err4);
+                        return res.status(500).json({ error: 'Internal server error' });
+                      }
                       const now = new Date().toISOString();
                       let pending = (cells || []).length;
                       if (pending === 0) {
@@ -351,7 +399,10 @@ router.post('/:id/tabs/:tabId/move', (req, res) => {
     `SELECT sp.role FROM sheet_permissions sp WHERE sp.sheet_id = ? AND sp.user_id = ?`,
     [sheetId, current.id],
     (err, perm) => {
-      if (err) return res.status(500).json({ error: 'Internal server error' });
+      if (err) {
+        console.error('move tab perm error', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
       if (!perm || (perm.role !== 'owner' && perm.role !== 'editor')) {
         return res.status(403).json({ error: 'No permission' });
       }
@@ -359,7 +410,10 @@ router.post('/:id/tabs/:tabId/move', (req, res) => {
         `SELECT id, order_index FROM sheet_tabs WHERE sheet_id = ? ORDER BY order_index, id`,
         [sheetId],
         (err2, rows) => {
-          if (err2) return res.status(500).json({ error: 'Internal server error' });
+          if (err2) {
+            console.error('move tab list error', err2);
+            return res.status(500).json({ error: 'Internal server error' });
+          }
           const tabs = rows || [];
           const fromIdx = tabs.findIndex((t) => t.id === tabId);
           if (fromIdx < 0) return res.status(404).json({ error: 'Tab not found' });

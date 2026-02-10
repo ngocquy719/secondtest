@@ -366,22 +366,29 @@
           if (window.SheetManager) SheetManager.renameSheet(tabId, newName.trim());
           renderSheetTabs();
         })
-        .catch((err) => alert(err.message));
+        .catch((err) => {
+          console.error('Rename tab failed', err);
+          alert(err && err.message ? err.message : 'Failed to rename');
+        });
       return;
     }
     if (action === 'duplicate') {
       apiRequest(`/sheets/${currentSheetId}/tabs/${tabId}/duplicate`, { method: 'POST' })
-        .then((newTab) => apiRequest(`/sheets/${currentSheetId}`))
-        .then((data) => {
-          if (!window.SheetManager) return;
-          SheetManager.setDocument(currentSheetId, data.tabs || [], data.permission);
-          createLuckysheetWithTabs(SheetManager.getState().sheets);
-          renderSheetTabs();
-          setActiveSheetId(newTab.id);
-          const order = SheetManager.getOrderById(newTab.id);
-          if (order >= 0) triggerLuckysheetSheetTabClick(order);
+        .then((newTab) => {
+          return apiRequest(`/sheets/${currentSheetId}`).then((data) => {
+            if (!window.SheetManager) return;
+            SheetManager.setDocument(currentSheetId, data.tabs || [], data.permission);
+            createLuckysheetWithTabs(SheetManager.getState().sheets);
+            renderSheetTabs();
+            setActiveSheetId(newTab.id);
+            const order = SheetManager.getOrderById(newTab.id);
+            if (order >= 0) triggerLuckysheetSheetTabClick(order);
+          });
         })
-        .catch((err) => alert(err.message));
+        .catch((err) => {
+          console.error('Duplicate sheet failed', err);
+          alert(err && err.message ? err.message : 'Failed to duplicate sheet');
+        });
       return;
     }
     if (action === 'delete') {
@@ -399,7 +406,10 @@
           renderSheetTabs();
           triggerLuckysheetSheetTabClick(0);
         })
-        .catch((err) => alert(err.message));
+        .catch((err) => {
+          console.error('Delete tab failed', err);
+          alert(err && err.message ? err.message : 'Failed to delete sheet');
+        });
       return;
     }
     if (action === 'move-left' || action === 'move-right') {
@@ -419,7 +429,10 @@
           setActiveSheetId(tabId);
           triggerLuckysheetSheetTabClick(newIdx);
         })
-        .catch((err) => alert(err.message));
+        .catch((err) => {
+          console.error('Move tab failed', err);
+          alert(err && err.message ? err.message : 'Failed to move sheet');
+        });
     }
   }
 
@@ -663,7 +676,8 @@
         renderSheetTabs();
         triggerLuckysheetSheetTabClick(order);
       } catch (err) {
-        alert(err.message);
+        console.error('Add sheet tab failed', err);
+        alert(err && err.message ? err.message : 'Failed to add sheet');
       }
     });
   }
@@ -900,7 +914,7 @@
   async function openSheetView(sheetId, permission) {
     currentSheetId = sheetId;
     currentPermission = permission;
-
+    try {
     const data = await apiRequest(`/sheets/${sheetId}`);
     let tabs = data.tabs || [];
     currentPermission = data.permission || permission;
@@ -943,6 +957,10 @@
     if (sidebarOverlay) sidebarOverlay.classList.remove('open');
     renderSheetTabs();
     showView('sheet');
+    } catch (err) {
+      console.error('Open sheet failed', err);
+      alert(err && err.message ? err.message : 'Failed to open spreadsheet');
+    }
   }
 
   function handleLocalCellChange(r, c, rawValue) {

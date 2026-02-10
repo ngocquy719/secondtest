@@ -23,7 +23,10 @@
   }
 
   function executeCommand(commandName, payload) {
-    if (typeof luckysheet === 'undefined') return;
+    if (typeof luckysheet === 'undefined') {
+      console.error('ToolbarCommands: luckysheet not loaded');
+      return;
+    }
     const range = getSelectionRange();
     if (!range) return;
 
@@ -31,7 +34,9 @@
       forEachCellInRange(range, (r, c) => {
         try {
           fn(r, c);
-        } catch (e) {}
+        } catch (e) {
+          console.warn('ToolbarCommands: apply failed for cell', r, c, commandName, e);
+        }
       });
     };
 
@@ -76,7 +81,9 @@
           if (r1 > r0 || c1 > c0) {
             try {
               luckysheet.setCellFormat(r0, c0, 'merge', { row: [r0, r1], column: [c0, c1] });
-            } catch (e) {}
+            } catch (e) {
+              console.warn('ToolbarCommands: merge failed', e);
+            }
           }
         }
         break;
