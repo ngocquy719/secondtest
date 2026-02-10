@@ -55,34 +55,15 @@
           <button type="button" class="gs-menu-item" data-menu="help">Help</button>
         </nav>
 
-        <!-- Toolbar / Ribbon -->
+        <!-- Toolbar / Ribbon (all implemented; no placeholders) -->
         <div class="gs-ribbon">
           <div class="gs-ribbon-row">
             <div class="gs-ribbon-group">
-              <button type="button" class="gs-ribbon-btn" title="Menus">Menus</button>
-              <button type="button" class="gs-ribbon-btn" title="Undo">↶</button>
-              <button type="button" class="gs-ribbon-btn" title="Redo">↷</button>
-              <button type="button" class="gs-ribbon-btn" title="Print">🖨</button>
-              <button type="button" class="gs-ribbon-btn" title="Format painter">🖌</button>
-              <select class="gs-ribbon-select gs-zoom-select" id="toolbar-zoom" title="Zoom"><option>50%</option><option>75%</option><option selected>100%</option><option>125%</option><option>150%</option></select>
-            </div>
-            <div class="gs-ribbon-group">
-              <select class="gs-ribbon-select" id="toolbar-number-format" title="Number format"><option>123</option><option>Currency</option><option>Percent</option><option>Date</option></select>
-              <button type="button" class="gs-ribbon-btn" title="Currency">$</button>
-              <button type="button" class="gs-ribbon-btn" title="Percent">%</button>
-              <button type="button" class="gs-ribbon-btn" title="Decrease decimals">.0←</button>
-              <button type="button" class="gs-ribbon-btn" title="Increase decimals">.0→</button>
-            </div>
-            <div class="gs-ribbon-group">
-              <select class="gs-ribbon-select" id="toolbar-font" title="Font"><option>Arial</option><option>Roboto</option></select>
               <select class="gs-ribbon-select gs-font-size" id="toolbar-size" title="Font size"><option>8</option><option>9</option><option selected>10</option><option>11</option><option>12</option><option>14</option></select>
               <button type="button" class="gs-ribbon-btn" id="toolbar-bold" title="Bold"><b>B</b></button>
               <button type="button" class="gs-ribbon-btn" id="toolbar-italic" title="Italic"><i>I</i></button>
               <button type="button" class="gs-ribbon-btn" id="toolbar-underline" title="Underline"><u>U</u></button>
               <button type="button" class="gs-ribbon-btn" id="toolbar-strike" title="Strikethrough">S̶</button>
-              <button type="button" class="gs-ribbon-btn" id="toolbar-text-color" title="Text color">A</button>
-              <button type="button" class="gs-ribbon-btn" id="toolbar-fill" title="Fill color">▤</button>
-              <button type="button" class="gs-ribbon-btn" id="toolbar-borders" title="Borders">⊞</button>
               <button type="button" class="gs-ribbon-btn" id="toolbar-merge" title="Merge cells">Merge</button>
             </div>
             <div class="gs-ribbon-group">
@@ -90,15 +71,9 @@
               <button type="button" class="gs-ribbon-btn" id="toolbar-align-center" title="Align center">≡</button>
               <button type="button" class="gs-ribbon-btn" id="toolbar-align-right" title="Align right">≡</button>
               <button type="button" class="gs-ribbon-btn" id="toolbar-valign" title="Vertical align">⊟</button>
-              <button type="button" class="gs-ribbon-btn" id="toolbar-wrap" title="Wrap text">↵</button>
-              <button type="button" class="gs-ribbon-btn" id="toolbar-rotate" title="Rotate">↻</button>
             </div>
             <div class="gs-ribbon-group">
-              <button type="button" class="gs-ribbon-btn" title="Insert link">🔗</button>
-              <button type="button" class="gs-ribbon-btn" title="Insert comment">💬</button>
-              <button type="button" class="gs-ribbon-btn" title="Insert chart">📊</button>
-              <button type="button" class="gs-ribbon-btn" id="toolbar-filter" title="Create filter">Filter</button>
-              <button type="button" class="gs-ribbon-btn" id="toolbar-sum" title="Functions">Σ</button>
+              <button type="button" class="gs-ribbon-btn" id="toolbar-sum" title="Sum selection">Σ</button>
             </div>
           </div>
         </div>
@@ -269,6 +244,7 @@
     <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js"></script>
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
     <script src="/sheetManager.js"></script>
+    <script src="/spreadsheetEngine.js"></script>
     <script src="/toolbarCommands.js"></script>
     <script src="/app.js"></script>
   </body>
