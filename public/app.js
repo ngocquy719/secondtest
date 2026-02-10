@@ -3,14 +3,16 @@
   let authToken = null;
   let currentUser = null;
   let currentSheetId = null;
-  let currentTabId = null;
-  let documentTabs = [];
   let currentPermission = null;
   let socket = null;
   let luckysheetInitialized = false;
   let isApplyingRemoteUpdate = false;
   const lastCellValues = {};
   let lastSelectedCell = { r: 0, c: 0 };
+
+  function getSheets() { return (window.SheetManager && SheetManager.getState().sheets) || []; }
+  function getActiveSheetId() { return (window.SheetManager && SheetManager.getState().activeSheetId) || null; }
+  function setActiveSheetId(id) { if (window.SheetManager) SheetManager.switchSheet(id); }
 
   const topUserNameEl = document.getElementById('top-user-name');
   const topLogoutBtn = document.getElementById('top-logout-btn');
@@ -302,10 +304,12 @@
 
   function renderSheetTabs() {
     if (!sheetTabsList) return;
+    const sheets = getSheets();
+    const activeId = getActiveSheetId();
     sheetTabsList.innerHTML = '';
-    documentTabs.forEach((tab) => {
+    sheets.forEach((tab) => {
       const wrap = document.createElement('div');
-      wrap.className = 'gs-sheet-tab' + (tab.id === currentTabId ? ' active' : '');
+      wrap.className = 'gs-sheet-tab' + (tab.id === activeId ? ' active' : '');
       wrap.dataset.tabId = String(tab.id);
       wrap.title = tab.name || 'Sheet';
       const label = document.createElement('span');
@@ -351,14 +355,15 @@
     const tabId = Number(sheetTabContextMenu.dataset.tabId);
     if (!tabId) return;
     closeTabContextMenu();
-    const tab = documentTabs.find((t) => t.id === tabId);
+    const sheets = getSheets();
+    const tab = sheets.find((t) => t.id === tabId);
     if (!tab) return;
     if (action === 'rename') {
       const newName = prompt('Rename sheet', tab.name || 'Sheet');
       if (newName == null || newName.trim() === '') return;
       apiRequest(`/sheets/${currentSheetId}/tabs/${tabId}`, { method: 'PATCH', body: { name: newName.trim() } })
         .then(() => {
-          tab.name = newName.trim();
+          if (window.SheetManager) SheetManager.renameSheet(tabId, newName.trim());
           renderSheetTabs();
         })
         .catch((err) => alert(err.message));
@@ -366,32 +371,31 @@
     }
     if (action === 'duplicate') {
       apiRequest(`/sheets/${currentSheetId}/tabs/${tabId}/duplicate`, { method: 'POST' })
-        .then((newTab) => {
-          return apiRequest(`/sheets/${currentSheetId}`).then((data) => {
-            documentTabs = data.tabs || [];
-            createLuckysheetWithTabs(documentTabs);
-            currentTabId = newTab.id;
-            renderSheetTabs();
-            const order = documentTabs.findIndex((t) => t.id === newTab.id);
-        if (order >= 0) triggerLuckysheetSheetTabClick(order);
-          });
+        .then((newTab) => apiRequest(`/sheets/${currentSheetId}`))
+        .then((data) => {
+          if (!window.SheetManager) return;
+          SheetManager.setDocument(currentSheetId, data.tabs || [], data.permission);
+          createLuckysheetWithTabs(SheetManager.getState().sheets);
+          renderSheetTabs();
+          setActiveSheetId(newTab.id);
+          const order = SheetManager.getOrderById(newTab.id);
+          if (order >= 0) triggerLuckysheetSheetTabClick(order);
         })
         .catch((err) => alert(err.message));
       return;
     }
     if (action === 'delete') {
-      if (documentTabs.length <= 1) {
+      if (sheets.length <= 1) {
         alert('Cannot delete the only sheet. Add another sheet first.');
         return;
       }
       if (!confirm('Delete sheet "' + (tab.name || 'Sheet') + '"?')) return;
       apiRequest(`/sheets/${currentSheetId}/tabs/${tabId}`, { method: 'DELETE' })
-        .then(() => apiRequest(`/sheets/${currentSheetId}`))
-        .then((data) => {
-          documentTabs = data.tabs || [];
-          if (documentTabs.length === 0) return;
-          currentTabId = documentTabs[0].id;
-          createLuckysheetWithTabs(documentTabs);
+        .then(() => {
+          if (window.SheetManager) SheetManager.removeSheet(tabId);
+          const nextSheets = getSheets();
+          if (nextSheets.length === 0) return;
+          createLuckysheetWithTabs(nextSheets);
           renderSheetTabs();
           triggerLuckysheetSheetTabClick(0);
         })
@@ -399,17 +403,20 @@
       return;
     }
     if (action === 'move-left' || action === 'move-right') {
-      const idx = documentTabs.findIndex((t) => t.id === tabId);
+      const idx = sheets.findIndex((t) => t.id === tabId);
       if (idx < 0) return;
-      const newIdx = action === 'move-left' ? Math.max(0, idx - 1) : Math.min(documentTabs.length - 1, idx + 1);
+      const newIdx = action === 'move-left' ? Math.max(0, idx - 1) : Math.min(sheets.length - 1, idx + 1);
       if (newIdx === idx) return;
       apiRequest(`/sheets/${currentSheetId}/tabs/${tabId}/move`, { method: 'POST', body: { order_index: newIdx } })
-        .then(() => apiRequest(`/sheets/${currentSheetId}`))
-        .then((data) => {
-          documentTabs = data.tabs || [];
-          currentTabId = documentTabs[newIdx].id;
-          createLuckysheetWithTabs(documentTabs);
+        .then(() => {
+          const arr = sheets.slice();
+          const [rem] = arr.splice(idx, 1);
+          arr.splice(newIdx, 0, rem);
+          arr.forEach((s, i) => { s.order = i; s.index = i; });
+          if (window.SheetManager) SheetManager.setSheets(arr);
+          createLuckysheetWithTabs(getSheets());
           renderSheetTabs();
+          setActiveSheetId(tabId);
           triggerLuckysheetSheetTabClick(newIdx);
         })
         .catch((err) => alert(err.message));
@@ -429,12 +436,14 @@
   if (sheetTabsListBtn && sheetTabsListModal) {
     sheetTabsListBtn.addEventListener('click', () => {
       if (!sheetTabsListModalUl) return;
+      const sheets = getSheets();
+      const activeId = getActiveSheetId();
       sheetTabsListModalUl.innerHTML = '';
-      documentTabs.forEach((tab) => {
+      sheets.forEach((tab) => {
         const li = document.createElement('li');
         li.textContent = tab.name || 'Sheet';
         li.dataset.tabId = String(tab.id);
-        if (tab.id === currentTabId) li.classList.add('active');
+        if (tab.id === activeId) li.classList.add('active');
         li.addEventListener('click', () => {
           switchToTab(tab.id);
           sheetTabsListModal.classList.add('hidden');
@@ -452,10 +461,10 @@
   }
 
   function switchToTab(tabId) {
-    if (tabId === currentTabId) return;
-    const order = documentTabs.findIndex((t) => t.id === tabId);
+    if (tabId === getActiveSheetId()) return;
+    const order = window.SheetManager ? SheetManager.getOrderById(tabId) : -1;
     if (order < 0) return;
-    currentTabId = tabId;
+    setActiveSheetId(tabId);
     renderSheetTabs();
     if (luckysheetInitialized) triggerLuckysheetSheetTabClick(order);
   }
@@ -504,9 +513,8 @@
     setAuth(null, null);
     luckysheetInitialized = false;
     currentSheetId = null;
-    currentTabId = null;
-    documentTabs = [];
     currentPermission = null;
+    if (window.SheetManager) SheetManager.reset();
     if (topUserNameEl) topUserNameEl.textContent = '';
     if (gsDocTitleEl) gsDocTitleEl.textContent = '';
     if (minimalUserName) minimalUserName.textContent = '';
@@ -629,20 +637,31 @@
 
   if (sheetTabAddBtn) {
     sheetTabAddBtn.addEventListener('click', async () => {
-      if (!currentSheetId) return;
+      if (!currentSheetId || !window.SheetManager) return;
       try {
-        const defaultName = 'Sheet' + (documentTabs.length + 1);
+        const sheets = getSheets();
+        const defaultName = 'Sheet' + (sheets.length + 1);
         const newTab = await apiRequest(`/sheets/${currentSheetId}/tabs`, {
           method: 'POST',
           body: { name: defaultName }
         });
-        const data = await apiRequest(`/sheets/${currentSheetId}`);
-        documentTabs = data.tabs || [];
-        createLuckysheetWithTabs(documentTabs);
-        currentTabId = newTab.id;
+        const order = sheets.length;
+        const minimalSheet = {
+          id: newTab.id,
+          name: newTab.name,
+          index: order,
+          order,
+          status: 0,
+          row: 100,
+          column: 26,
+          celldata: [],
+          config: {}
+        };
+        SheetManager.addSheet(minimalSheet);
+        const nextSheets = getSheets();
+        createLuckysheetWithTabs(nextSheets);
         renderSheetTabs();
-        const order = documentTabs.findIndex((t) => t.id === newTab.id);
-        if (order >= 0) triggerLuckysheetSheetTabClick(order);
+        triggerLuckysheetSheetTabClick(order);
       } catch (err) {
         alert(err.message);
       }
@@ -828,7 +847,7 @@
     socket.on('cell_update', (payload) => {
       const { sheetId, sheetTabId, row, column, value } = payload || {};
       if (!luckysheetInitialized) return;
-      if (sheetId !== currentSheetId || sheetTabId !== currentTabId) return;
+      if (sheetId !== currentSheetId || sheetTabId !== getActiveSheetId()) return;
 
       isApplyingRemoteUpdate = true;
       try {
@@ -883,8 +902,7 @@
     currentPermission = permission;
 
     const data = await apiRequest(`/sheets/${sheetId}`);
-    const tabs = data.tabs || [];
-    documentTabs = tabs;
+    let tabs = data.tabs || [];
     currentPermission = data.permission || permission;
     if (gsDocTitleEl) {
       gsDocTitleEl.textContent = data.sheet?.name || 'Untitled spreadsheet';
@@ -892,17 +910,12 @@
     }
     if (gsSaveStatusEl) gsSaveStatusEl.textContent = 'Saved';
 
-    if (typeof luckysheet.destroy === 'function') {
-      try { luckysheet.destroy(); } catch (_) {}
-    }
-    luckysheetInitialized = false;
-
     if (tabs.length === 0) {
       const newTab = await apiRequest(`/sheets/${sheetId}/tabs`, { method: 'POST', body: { name: 'Sheet1' } });
-      documentTabs = [{
+      tabs = [{
         id: newTab.id,
         name: newTab.name,
-        index: newTab.id,
+        index: 0,
         order: 0,
         status: 1,
         row: 100,
@@ -910,12 +923,18 @@
         celldata: [],
         config: {}
       }];
-      currentTabId = newTab.id;
-    } else {
-      currentTabId = tabs[0].id;
     }
 
-    createLuckysheetWithTabs(documentTabs);
+    if (typeof luckysheet.destroy === 'function') {
+      try { luckysheet.destroy(); } catch (_) {}
+    }
+    luckysheetInitialized = false;
+
+    if (window.SheetManager) {
+      SheetManager.setDocument(sheetId, tabs, currentPermission);
+      setActiveSheetId(tabs[0].id);
+    }
+    createLuckysheetWithTabs(getSheets());
 
     if (socket && socket.connected) {
       socket.emit('join_sheet', { sheetId });
@@ -950,7 +969,7 @@
 
     const payload = {
       sheetId: currentSheetId,
-      sheetTabId: currentTabId,
+      sheetTabId: getActiveSheetId(),
       row: r,
       column: c,
       value,
@@ -960,7 +979,25 @@
     socket.emit('cell_update', payload);
   }
 
+  function bindToolbarCommands() {
+    if (typeof ToolbarCommands === 'undefined' || !ToolbarCommands.executeCommand) return;
+    const ex = (cmd, payload) => () => { if (luckysheetInitialized) ToolbarCommands.executeCommand(cmd, payload); };
+    const byId = (id) => document.getElementById(id);
+    byId('toolbar-bold')?.addEventListener('click', ex('bold'));
+    byId('toolbar-italic')?.addEventListener('click', ex('italic'));
+    byId('toolbar-underline')?.addEventListener('click', ex('underline'));
+    byId('toolbar-strike')?.addEventListener('click', ex('strikethrough'));
+    byId('toolbar-align-left')?.addEventListener('click', ex('alignLeft'));
+    byId('toolbar-align-center')?.addEventListener('click', ex('alignCenter'));
+    byId('toolbar-align-right')?.addEventListener('click', ex('alignRight'));
+    byId('toolbar-valign')?.addEventListener('click', () => { if (luckysheetInitialized) ToolbarCommands.executeCommand('alignMiddle'); });
+    byId('toolbar-merge')?.addEventListener('click', ex('merge'));
+    const sizeEl = byId('toolbar-size');
+    if (sizeEl) sizeEl.addEventListener('change', function () { if (luckysheetInitialized) ToolbarCommands.executeCommand('fontSize', parseInt(this.value, 10) || 10); });
+  }
+
   // Initialize
   tryRestoreSession();
+  bindToolbarCommands();
 })();
 
