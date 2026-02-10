@@ -53,9 +53,10 @@
   const shareMessage = document.getElementById('share-message');
   const shareCancelBtn = document.getElementById('share-cancel');
   const menuDropdowns = document.getElementById('gs-menu-dropdowns');
-  const sheetTabsList = document.getElementById('sheet-tabs-list');
-  const sheetTabAddBtn = document.getElementById('sheet-tab-add');
-  const sheetTabsListBtn = document.getElementById('sheet-tabs-list-btn');
+  // Custom sheet tab UI has been removed; Luckysheet's native sheet bar is used instead.
+  const sheetTabsList = null;
+  const sheetTabAddBtn = null;
+  const sheetTabsListBtn = null;
   const sheetTabContextMenu = document.getElementById('sheet-tab-context-menu');
   const sheetTabsListModal = document.getElementById('sheet-tabs-list-modal');
   const sheetTabsListModalUl = document.getElementById('sheet-tabs-list-modal-ul');
@@ -329,45 +330,7 @@
   }
 
   function renderSheetTabs() {
-    if (!sheetTabsList) return;
-    const sheets = getSheets();
-    const activeId = getActiveSheetId();
-    sheetTabsList.innerHTML = '';
-    sheets.forEach((tab) => {
-      const wrap = document.createElement('div');
-      wrap.className = 'gs-sheet-tab' + (tab.id === activeId ? ' active' : '');
-      wrap.dataset.tabId = String(tab.id);
-      wrap.title = tab.name || 'Sheet';
-      const label = document.createElement('span');
-      label.textContent = tab.name || 'Sheet';
-      label.style.flex = '1';
-      label.style.overflow = 'hidden';
-      label.style.textOverflow = 'ellipsis';
-      const arrow = document.createElement('span');
-      arrow.className = 'gs-sheet-tab-arrow';
-      arrow.textContent = '▼';
-      arrow.setAttribute('aria-label', 'Tab menu');
-      wrap.appendChild(label);
-      wrap.appendChild(arrow);
-
-      const openContextMenu = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        sheetTabContextMenu.dataset.tabId = String(tab.id);
-        sheetTabContextMenu.classList.remove('hidden');
-        sheetTabContextMenu.style.left = e.clientX + 'px';
-        sheetTabContextMenu.style.top = e.clientY + 'px';
-      };
-
-      label.addEventListener('click', (e) => {
-        e.stopPropagation();
-        switchToTab(tab.id);
-      });
-      arrow.addEventListener('click', openContextMenu);
-      wrap.addEventListener('contextmenu', openContextMenu);
-
-      sheetTabsList.appendChild(wrap);
-    });
+    // No-op: we use Luckysheet's native sheet tab bar only.
   }
 
   function closeTabContextMenu() {
@@ -384,13 +347,12 @@
     const sheets = getSheets();
     const tab = sheets.find((t) => t.id === tabId);
     if (!tab) return;
-    if (action === 'rename') {
+    if (action === 'rename' && false) {
       const newName = prompt('Rename sheet', tab.name || 'Sheet');
       if (newName == null || newName.trim() === '') return;
-      apiRequest(`/sheets/${currentSheetId}/tabs/${tabId}`, { method: 'PATCH', body: { name: newName.trim() } })
+          apiRequest(`/sheets/${currentSheetId}/tabs/${tabId}`, { method: 'PATCH', body: { name: newName.trim() } })
         .then(() => {
-          if (window.SheetManager) SheetManager.renameSheet(tabId, newName.trim());
-          renderSheetTabs();
+          // Luckysheet native tab bar will reflect rename on next load; no custom state.
         })
         .catch((err) => {
           console.error('Rename tab failed', err);
@@ -398,17 +360,12 @@
         });
       return;
     }
-    if (action === 'duplicate') {
+    if (action === 'duplicate' && false) {
       apiRequest(`/sheets/${currentSheetId}/tabs/${tabId}/duplicate`, { method: 'POST' })
         .then((newTab) => {
           return apiRequest(`/sheets/${currentSheetId}`).then((data) => {
-          if (!window.SheetManager) return;
-          SheetManager.setDocument(currentSheetId, data.tabs || [], data.permission);
-          createLuckysheetWithTabs(SheetManager.getState().sheets);
-          renderSheetTabs();
-          setActiveSheetId(newTab.id);
-            const order = SheetManager.getOrderById(newTab.id);
-            if (order >= 0) triggerLuckysheetSheetTabClick(order);
+            // Re-init Luckysheet with updated tabs from server
+            createLuckysheetWithTabs(data.tabs || []);
           });
         })
         .catch((err) => {
@@ -417,7 +374,7 @@
         });
       return;
     }
-    if (action === 'delete') {
+    if (action === 'delete' && false) {
       if (sheets.length <= 1) {
         alert('Cannot delete the only sheet. Add another sheet first.');
         return;
@@ -425,12 +382,9 @@
       if (!confirm('Delete sheet "' + (tab.name || 'Sheet') + '"?')) return;
       apiRequest(`/sheets/${currentSheetId}/tabs/${tabId}`, { method: 'DELETE' })
         .then(() => {
-          if (window.SheetManager) SheetManager.removeSheet(tabId);
-          const nextSheets = getSheets();
-          if (nextSheets.length === 0) return;
-          createLuckysheetWithTabs(nextSheets);
-          renderSheetTabs();
-          triggerLuckysheetSheetTabClick(0);
+          return apiRequest(`/sheets/${currentSheetId}`).then((data) => {
+            createLuckysheetWithTabs(data.tabs || []);
+          });
         })
         .catch((err) => {
           console.error('Delete tab failed', err);
@@ -438,22 +392,16 @@
         });
       return;
     }
-    if (action === 'move-left' || action === 'move-right') {
+    if ((action === 'move-left' || action === 'move-right') && false) {
       const idx = sheets.findIndex((t) => t.id === tabId);
       if (idx < 0) return;
       const newIdx = action === 'move-left' ? Math.max(0, idx - 1) : Math.min(sheets.length - 1, idx + 1);
       if (newIdx === idx) return;
       apiRequest(`/sheets/${currentSheetId}/tabs/${tabId}/move`, { method: 'POST', body: { order_index: newIdx } })
         .then(() => {
-          const arr = sheets.slice();
-          const [rem] = arr.splice(idx, 1);
-          arr.splice(newIdx, 0, rem);
-          arr.forEach((s, i) => { s.order = i; s.index = i; });
-          if (window.SheetManager) SheetManager.setSheets(arr);
-          createLuckysheetWithTabs(getSheets());
-          renderSheetTabs();
-          setActiveSheetId(tabId);
-          triggerLuckysheetSheetTabClick(newIdx);
+          return apiRequest(`/sheets/${currentSheetId}`).then((data) => {
+            createLuckysheetWithTabs(data.tabs || []);
+          });
         })
         .catch((err) => {
           console.error('Move tab failed', err);
@@ -462,7 +410,8 @@
     }
   }
 
-  if (sheetTabContextMenu) {
+  // Custom context menu kept only for future UI; does not manipulate sheet data directly anymore.
+  if (sheetTabContextMenu && false) {
     sheetTabContextMenu.querySelectorAll('.gs-context-item').forEach((el) => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -500,12 +449,8 @@
   }
 
   function switchToTab(tabId) {
-    if (tabId === getActiveSheetId()) return;
-    const order = window.SheetManager ? SheetManager.getOrderById(tabId) : -1;
-    if (order < 0) return;
+    // Native Luckysheet bar handles switching; this is kept only for legacy UI hooks.
     setActiveSheetId(tabId);
-    renderSheetTabs();
-    if (luckysheetInitialized) triggerLuckysheetSheetTabClick(order);
   }
 
   if (homeCreateSheetBtn) {
@@ -553,7 +498,6 @@
     luckysheetInitialized = false;
     currentSheetId = null;
     currentPermission = null;
-    if (window.SheetManager) SheetManager.reset();
     if (topUserNameEl) topUserNameEl.textContent = '';
     if (gsDocTitleEl) gsDocTitleEl.textContent = '';
     if (minimalUserName) minimalUserName.textContent = '';
@@ -674,61 +618,7 @@
     });
   }
 
-  if (sheetTabAddBtn) {
-    sheetTabAddBtn.addEventListener('click', async () => {
-      if (!currentSheetId || !window.SheetManager) return;
-      try {
-        const sheets = getSheets();
-        const defaultName = 'Sheet' + (sheets.length + 1);
-        const newTab = await apiRequest(`/sheets/${currentSheetId}/tabs`, {
-          method: 'POST',
-          body: { name: defaultName }
-        });
-        const order = sheets.length;
-        const minimalSheet = {
-          id: newTab.id,
-          name: newTab.name,
-          index: order,
-          order,
-          status: 0,
-          row: 100,
-          column: 26,
-          celldata: [],
-          config: {}
-        };
-        SheetManager.addSheet(minimalSheet);
-        if (typeof luckysheet.insertSheet === 'function') {
-          const sheetConfig = {
-            name: minimalSheet.name,
-            index: String(minimalSheet.id),
-            order: minimalSheet.order,
-            status: 0,
-            row: minimalSheet.row || 100,
-            column: minimalSheet.column || 26,
-            celldata: [],
-            config: {}
-          };
-          try {
-            luckysheet.insertSheet(sheetConfig);
-            renderSheetTabs();
-            triggerLuckysheetSheetTabClick(minimalSheet.order);
-          } catch (e) {
-            console.warn('insertSheet failed, recreating workbook', e);
-            createLuckysheetWithTabs(getSheets());
-            renderSheetTabs();
-            triggerLuckysheetSheetTabClick(minimalSheet.order);
-          }
-        } else {
-          createLuckysheetWithTabs(getSheets());
-          renderSheetTabs();
-          triggerLuckysheetSheetTabClick(minimalSheet.order);
-        }
-      } catch (err) {
-        console.error('Add sheet tab failed', err);
-        alert(err && err.message ? err.message : 'Failed to add sheet');
-      }
-    });
-  }
+  // Custom "+" button for tabs has been removed; Luckysheet's native "+" is used instead.
 
   if (headerShareBtn) {
     headerShareBtn.addEventListener('click', async () => {
@@ -913,8 +803,10 @@
 
       isApplyingRemoteUpdate = true;
       try {
-        const order = window.SheetManager ? SheetManager.getOrderById(sheetTabId) : 0;
-        if (order >= 0 && typeof luckysheet.setCellValue === 'function') {
+        const sheets = getSheets();
+        const target = sheets.find((s) => String(s.index) === String(sheetTabId));
+        const order = target && typeof target.order === 'number' ? target.order : 0;
+        if (typeof luckysheet.setCellValue === 'function') {
           luckysheet.setCellValue(row, column, value, { order });
         }
         lastCellValues[`${sheetTabId}:${row}:${column}`] = value;
