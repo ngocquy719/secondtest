@@ -7,7 +7,7 @@ if (!db || typeof db.get !== 'function' || typeof db.all !== 'function' || typeo
 
 const router = express.Router();
 
-// Build one sheet for Luckysheet multi-sheet workbook. index = unique id, order = display order (0-based), status = 1 active / 0 inactive.
+// Build one sheet for Luckysheet multi-sheet workbook. index = 0-based position (Luckysheet uses this for setSheetActive), order = same, status = 1 active / 0 inactive.
 function buildLuckysheetData(tabId, tabName, orderIndex, isActive, cellRows) {
   const celldata = (cellRows || []).map((c) => ({
     r: c.row,
@@ -17,7 +17,7 @@ function buildLuckysheetData(tabId, tabName, orderIndex, isActive, cellRows) {
   return {
     id: tabId,
     name: tabName || 'Sheet1',
-    index: tabId,
+    index: orderIndex,
     order: orderIndex,
     status: isActive ? 1 : 0,
     row: 100,

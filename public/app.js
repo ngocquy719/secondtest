@@ -373,9 +373,7 @@
             currentTabId = newTab.id;
             renderSheetTabs();
             const order = documentTabs.findIndex((t) => t.id === newTab.id);
-            if (order >= 0 && typeof luckysheet.setSheetActive === 'function') {
-              try { luckysheet.setSheetActive(order); } catch (_) {}
-            }
+        if (order >= 0) triggerLuckysheetSheetTabClick(order);
           });
         })
         .catch((err) => alert(err.message));
@@ -395,9 +393,7 @@
           currentTabId = documentTabs[0].id;
           createLuckysheetWithTabs(documentTabs);
           renderSheetTabs();
-          if (typeof luckysheet.setSheetActive === 'function') {
-            try { luckysheet.setSheetActive(0); } catch (_) {}
-          }
+          triggerLuckysheetSheetTabClick(0);
         })
         .catch((err) => alert(err.message));
       return;
@@ -414,9 +410,7 @@
           currentTabId = documentTabs[newIdx].id;
           createLuckysheetWithTabs(documentTabs);
           renderSheetTabs();
-          if (typeof luckysheet.setSheetActive === 'function') {
-            try { luckysheet.setSheetActive(newIdx); } catch (_) {}
-          }
+          triggerLuckysheetSheetTabClick(newIdx);
         })
         .catch((err) => alert(err.message));
     }
@@ -463,11 +457,7 @@
     if (order < 0) return;
     currentTabId = tabId;
     renderSheetTabs();
-    if (luckysheetInitialized && typeof luckysheet.setSheetActive === 'function') {
-      try {
-        luckysheet.setSheetActive(order);
-      } catch (_) {}
-    }
+    if (luckysheetInitialized) triggerLuckysheetSheetTabClick(order);
   }
 
   if (homeCreateSheetBtn) {
@@ -652,9 +642,7 @@
         currentTabId = newTab.id;
         renderSheetTabs();
         const order = documentTabs.findIndex((t) => t.id === newTab.id);
-        if (order >= 0 && typeof luckysheet.setSheetActive === 'function') {
-          try { luckysheet.setSheetActive(order); } catch (_) {}
-        }
+        if (order >= 0) triggerLuckysheetSheetTabClick(order);
       } catch (err) {
         alert(err.message);
       }
@@ -864,7 +852,7 @@
       container: 'luckysheet',
       data: tabsData,
       showinfobar: false,
-      showsheetbar: false,
+      showsheetbar: true,
       enableAddRow: true,
       enableAddCol: true,
       sheetFormulaBar: true,
@@ -876,6 +864,18 @@
       }
     });
     luckysheetInitialized = true;
+  }
+
+  function triggerLuckysheetSheetTabClick(order) {
+    if (typeof order !== 'number' || order < 0) return;
+    if (typeof luckysheet.setSheetActive === 'function') {
+      try { luckysheet.setSheetActive(order); return; } catch (_) {}
+    }
+    var container = document.querySelector('#luckysheet-sheet-area .luckysheet-sheet-container-c') || document.querySelector('.luckysheet-sheet-container-c') || document.querySelector('[class*="sheet-container"]');
+    if (container) {
+      var items = container.querySelectorAll('[class*="sheet-item"], [class*="sheet-container-item"], .luckysheet-sheet-list-item, div[class*="sheet"]');
+      if (items.length > order && items[order]) items[order].click();
+    }
   }
 
   async function openSheetView(sheetId, permission) {

@@ -485,6 +485,12 @@ html, body {
   min-height: 300px;
 }
 
+/* Hide Luckysheet's native sheet bar (we use our own .gs-sheet-tabs-bar). Bar stays in DOM so we can trigger tab click. */
+#luckysheet-sheet-area,
+.luckysheet-sheet-area {
+  display: none !important;
+}
+
 /* --- Sheet tabs bar (Google Sheets: one row, + = add worksheet in this file) --- */
 .gs-sheet-tabs-bar {
   flex-shrink: 0;
